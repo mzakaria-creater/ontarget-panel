@@ -56,7 +56,7 @@ export default function Monitor() {
   const [pageSize, setPageSize] = useState(100)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastSync, setLastSync] = useState(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('wallet') || '')
   const [editAmount, setEditAmount] = useState('')
   const [actionBusy, setActionBusy] = useState(false)
   const [proofUrl, setProofUrl] = useState(null)
@@ -86,7 +86,7 @@ export default function Monitor() {
       if (filters.dateTo) query = query.lte('created_utc', new Date(filters.dateTo).toISOString())
       const term = search.trim()
       if (term) {
-        if (/^\d+$/.test(term)) query = query.eq('tx_id', Number(term))
+        if (/^\d+$/.test(term)) query = query.limit(5000)
         else {
           const safeTerm = term.replace(/[(),]/g, ' ')
           query = query.or(`sender_name.ilike.%${safeTerm}%,sender_number.ilike.%${safeTerm}%,payment_method.ilike.%${safeTerm}%,merchant.ilike.%${safeTerm}%,sub_merchant.ilike.%${safeTerm}%,status.ilike.%${safeTerm}%`)
@@ -285,7 +285,12 @@ export default function Monitor() {
   const visibleRows = useMemo(() => {
     const query = search.trim().toLowerCase()
     if (!query) return monitorRows
-    return monitorRows.filter((row) => [row.tx_id, row.sender_number, row.sender_name, row.payment_method, row.merchant, row.status, row.amount].some((value) => String(value ?? '').toLowerCase().includes(query)))
+    const numericQuery = /^\d+$/.test(query)
+    return monitorRows.filter((row) => {
+      const searchable = [row.tx_id, row.sender_number, row.sender_name, row.payment_method, row.merchant, row.status, row.amount, row.to_account_number, row.to_account_name, row.wallet, row.wallet_number]
+      if (numericQuery) return String(row.tx_id ?? '').endsWith(query) || String(row.amount ?? '') === query || searchable.some((value) => String(value ?? '').endsWith(query))
+      return searchable.some((value) => String(value ?? '').toLowerCase().includes(query))
+    })
   }, [monitorRows, search])
 
   const notifications = useMemo(() => monitorRows.filter((row) => row.status === 'PENDING').slice(0, 8).map((row) => ({
