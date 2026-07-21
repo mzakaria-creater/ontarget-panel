@@ -43,7 +43,8 @@ function readBody(req) {
 export default async function handler(req, res) {
   try {
     const requestUrl = new URL(req.url || '/', 'http://vercel.local')
-    const rawPath = requestUrl.pathname.replace(/^\/api\/supabase/, '')
+    const rewrittenPath = requestUrl.searchParams.get('path')
+    const rawPath = (rewrittenPath || requestUrl.pathname.replace(/^\/api\/supabase/, '')).split('?')[0]
     const resourcePath = rawPath.replace(/^\/rest\/v1\//, '').split('/')[0]
     if (!ALLOWED_RESOURCES.has(resourcePath)) {
       res.status(400).json({ error: 'Unsupported Supabase resource' })
@@ -66,7 +67,10 @@ export default async function handler(req, res) {
     }
     if (req.headers.prefer) headers.Prefer = req.headers.prefer
 
-    const response = await fetch(`${supabaseUrl}${upstreamPath}${requestUrl.search}`, {
+    const upstreamQuery = new URLSearchParams(requestUrl.searchParams)
+    upstreamQuery.delete('path')
+    const queryString = upstreamQuery.toString()
+    const response = await fetch(`${supabaseUrl}${upstreamPath}${queryString ? `?${queryString}` : ''}`, {
       method: req.method,
       headers,
       body: ['GET', 'HEAD'].includes(req.method || 'GET') ? undefined : await readBody(req),
