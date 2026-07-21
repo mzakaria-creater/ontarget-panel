@@ -33,6 +33,8 @@ export default function App() {
           <main className="min-w-0 flex-1 overflow-hidden pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<Navigate to="/monitor" replace />} />
+              <Route path="/dashboard" element={<Navigate to="/monitor" replace />} />
+              <Route path="/transactions" element={<Navigate to="/monitor" replace />} />
               <Route path="/monitor" element={withBoundary(Monitor)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
