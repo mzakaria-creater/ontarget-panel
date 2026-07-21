@@ -24,6 +24,7 @@ const NAV_GROUPS = [
     label: 'الإعدادات',
     items: [
       { to: '/wallets', label: 'المحافظ', icon: '💳' },
+      { to: '/wallet-flow', label: 'حركة المحافظ', icon: '💰' },
       { to: '/settings', label: 'الإعدادات', icon: '⚙️' },
       { to: '/users', label: 'المستخدمون والصلاحيات', icon: '👥' },
       { to: '/report', label: 'التقرير الشامل', icon: '📑' },

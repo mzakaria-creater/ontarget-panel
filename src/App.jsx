@@ -17,6 +17,7 @@ import TelegramBot from './pages/TelegramBot'
 import UsersAdmin from './pages/UsersAdmin'
 import Settlement from './pages/Settlement'
 import AutomationTV from './pages/AutomationTV'
+import WalletFlow from './pages/WalletFlow'
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
 import { ThemeProvider } from './components/ThemeContext'
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/settlement" element={withBoundary(Settlement)} />
               <Route path="/recovery" element={withBoundary(Recovery)} />
               <Route path="/wallets" element={withBoundary(Wallets)} />
+              <Route path="/wallet-flow" element={withBoundary(WalletFlow)} />
               <Route path="/settings" element={withBoundary(Settings)} />
               <Route path="/report" element={withBoundary(Report)} />
               <Route path="/analytics" element={withBoundary(AnalyticsDashboard)} />

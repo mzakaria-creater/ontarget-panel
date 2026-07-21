@@ -11,7 +11,7 @@ const DIRECT = [
   { to: '/report', icon: '🗄️', ar: 'TRX', en: 'TRX' },
 ]
 
-const ALL_PAGES = [...DIRECT, { to: '/tv', icon: '📺', ar: 'شاشة المراقبة', en: 'Monitor TV' }, { to: '/telegram', icon: '🤖', ar: 'Telegram', en: 'Telegram' }, { to: '/recovery', icon: '⚡', ar: 'الاسترجاع', en: 'Recovery' }, { to: '/settlement', icon: '💼', ar: 'التسويات', en: 'Settlement' }, { to: '/blacklist', icon: '🚫', ar: 'القائمة السوداء', en: 'Blacklist' }, { to: '/report', icon: '📑', ar: 'التقرير', en: 'Report' }, { to: '/analytics', icon: '📈', ar: 'التحليلات', en: 'Analytics' }, { to: '/users', icon: '👥', ar: 'المستخدمون', en: 'Users' }]
+const ALL_PAGES = [...DIRECT, { to: '/tv', icon: '📺', ar: 'شاشة المراقبة', en: 'Monitor TV' }, { to: '/wallet-flow', icon: '💰', ar: 'حركة المحافظ', en: 'Wallet Flow' }, { to: '/telegram', icon: '🤖', ar: 'Telegram', en: 'Telegram' }, { to: '/recovery', icon: '⚡', ar: 'الاسترجاع', en: 'Recovery' }, { to: '/settlement', icon: '💼', ar: 'التسويات', en: 'Settlement' }, { to: '/blacklist', icon: '🚫', ar: 'القائمة السوداء', en: 'Blacklist' }, { to: '/report', icon: '📑', ar: 'التقرير', en: 'Report' }, { to: '/analytics', icon: '📈', ar: 'التحليلات', en: 'Analytics' }, { to: '/users', icon: '👥', ar: 'المستخدمون', en: 'Users' }]
 
 export default function MobileBottomNav() {
   const { language } = useLanguage()
