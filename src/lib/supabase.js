@@ -6,10 +6,8 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.
 const proxiedFetch = (input, init) => {
   const target = new URL(input instanceof Request ? input.url : input, window.location.origin)
   if (target.origin === supabaseUrl && target.pathname.startsWith('/rest/v1/')) {
-    // Keep the Vercel function path to one segment; Vercel's catch-all route
-    // does not reliably match the deeper /rest/v1/<resource> URL.
     const resourcePath = target.pathname.replace(/^\/rest\/v1\//, '')
-    const proxyPath = `/api/supabase/${resourcePath}${target.search}`
+    const proxyPath = `/api/data?resource=${encodeURIComponent(resourcePath)}${target.search ? `&${target.search.slice(1)}` : ''}`
     if (input instanceof Request && !init) return window.fetch(new Request(proxyPath, input))
     return window.fetch(proxyPath, init)
   }
