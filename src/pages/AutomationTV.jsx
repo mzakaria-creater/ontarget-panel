@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { formatMoney, formatNumber, formatRelativeTime, formatAbsoluteDate } from '../utils/format'
+import PaymentMethodBadge from '../components/PaymentMethodBadge'
+import { supabase } from '../lib/supabase'
 
 function statusTone(status) {
   if (status === 'PAID' || status === 'completed') return 'text-success'
@@ -8,8 +10,27 @@ function statusTone(status) {
   return 'text-warning'
 }
 
+function UrgentTurboButton() {
+  const [busy, setBusy] = useState(false)
+  const [until, setUntil] = useState(() => Number(localStorage.getItem('ontarget-turbo-stop-at') || 0))
+  const active = until > Date.now()
+  async function runUrgent() {
+    setBusy(true)
+    const stopAt = Date.now() + 10 * 60 * 1000
+    const settings = await supabase.from('automation_settings').update({ turbo_mode: true, automation_enabled: true, decline_grace_minutes: 3 }).eq('id', 1)
+    const jobs = await supabase.from('browser_jobs').update({ priority: 1000, next_run_at: new Date().toISOString() }).eq('state', 'pending')
+    if (!settings.error && !jobs.error) { localStorage.setItem('ontarget-turbo-stop-at', String(stopAt)); setUntil(stopAt) }
+    setBusy(false)
+  }
+  async function stopUrgent() {
+    setBusy(true); await supabase.from('automation_settings').update({ turbo_mode: false }).eq('id', 1); localStorage.removeItem('ontarget-turbo-stop-at'); setUntil(0); setBusy(false)
+  }
+  useEffect(() => { if (!until) return undefined; const timer = setInterval(() => { if (Date.now() >= until) stopUrgent() }, 1000); return () => clearInterval(timer) }, [until])
+  return <button onClick={active ? stopUrgent : runUrgent} disabled={busy} className={`rounded-xl border px-3 py-2 text-xs font-black ${active ? 'border-danger/50 bg-danger/10 text-danger' : 'border-gold/40 bg-gold/10 text-gold'} disabled:opacity-50`}>{active ? '⏹ إيقاف Turbo' : '🚀 Turbo عاجل · 3 دقائق'}{active && <span className="ml-1 text-[10px]">({Math.max(0, Math.ceil((until - Date.now()) / 60000))}د)</span>}</button>
+}
+
 function Panel({ title, eyebrow, children, className = '' }) {
-  return <section className={`rounded-3xl border border-border bg-card/80 p-5 shadow-lg shadow-slate-950/5 ${className}`}><div className="mb-4 flex items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">{eyebrow}</div><h2 className="mt-1 text-lg font-extrabold text-text">{title}</h2></div><span className="h-2 w-2 rounded-full bg-success shadow-[0_0_14px_var(--color-success)]" /></div>{children}</section>
+  return <section className={`rounded-3xl border border-border bg-card/80 p-5 shadow-lg shadow-slate-950/5 ${className}`}><div className="mb-4 flex items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">{eyebrow}</div><h2 className="mt-1 text-lg font-extrabold text-text">{title}</h2></div>{title === 'Automation pipeline' ? <UrgentTurboButton /> : <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_14px_var(--color-success)]" />}</div>{children}</section>
 }
 
 function refsFromTx(tx) {
@@ -62,7 +83,7 @@ export default function AutomationTV() {
       <Panel title="Execution activity" eyebrow="Browser worker"><div className="space-y-2">{latestJobs.length ? latestJobs.map((job) => <div key={job.id} className="flex items-center gap-3 rounded-xl bg-surface px-3 py-2.5"><span className={`h-2.5 w-2.5 shrink-0 rounded-full ${job.state === 'completed' ? 'bg-success' : job.state === 'failed' ? 'bg-danger' : 'bg-warning animate-pulse'}`} /><div className="min-w-0 flex-1"><div className="truncate text-sm font-bold text-text">TX #{job.tx_id} · {job.target_status || '—'}</div><div className="text-[11px] text-muted">{job.source || 'automation'} · {formatRelativeTime(job.updated_at || job.created_at)}</div></div><span className={`text-xs font-bold uppercase ${statusTone(job.state)}`}>{job.state}</span></div>) : <div className="py-10 text-center text-sm text-muted">No automation jobs yet</div>}</div></Panel></div>
 
     <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]"><Panel title="📨 رسائل SMS حية" eyebrow="كل رسائل SMS — جدول شامل"><div className="mb-3 flex items-center justify-between text-xs text-muted"><span>{formatNumber(smsRows.length)} رسالة · تحديث كل 10 ثواني</span><span>● مباشر</span></div><div className="max-h-[620px] overflow-auto rounded-xl border border-border"><table className="w-full min-w-[900px] text-sm"><thead className="sticky top-0 z-10 bg-surface text-[11px] text-muted"><tr><th className="px-3 py-3 text-left">الجهاز</th><th className="px-3 py-3 text-left">النوع</th><th className="px-3 py-3 text-left">المبلغ</th><th className="px-3 py-3 text-left">من/إلى</th><th className="px-3 py-3 text-left">🏦 محفظة الاستقبال</th><th className="px-3 py-3 text-left">رقم العملية</th><th className="px-3 py-3 text-left">الرصيد بعدها</th><th className="px-3 py-3 text-left">معاملة مرتبطة</th><th className="px-3 py-3 text-left">الوقت</th></tr></thead><tbody>{latestSms.map((row) => { const linked = row.consumed_by_tx_id || row.matched_transaction_id || row.maven_transaction_id; return <tr key={row.id} className="border-t border-border"><td className="px-3 py-3 font-bold text-gold">{row.device_name || '—'}</td><td className="px-3 py-3"><span className="mr-1 text-warning">{row.sms_category === 'withdrawal' ? '💸' : '🟠'}</span>{row.sms_category === 'withdrawal' ? 'سحب' : 'إيداع'}</td><td className="px-3 py-3 font-bold">{formatMoney(row.amount)}</td><td className="max-w-[170px] truncate px-3 py-3" title={row.sender_name || row.sender_number}>{row.sender_name || row.sender_number || row.receiver_number || '—'}</td><td className="px-3 py-3">{row.confirmed_wallet_number || row.wallet_name || row.wallet || row.receiver_number || '—'}</td><td className="px-3 py-3 font-mono text-xs">{row.trx_id || row.trx_reference || '—'}</td><td className="px-3 py-3">{formatMoney(row.balance_after)}</td><td className="px-3 py-3">{linked ? <span className="font-bold text-success">#{linked}</span> : <span className="text-muted">—</span>}</td><td className="whitespace-nowrap px-3 py-3 text-xs text-muted">{formatAbsoluteDate(row.received_at)}</td></tr> })}</tbody></table></div></Panel>
-      <div className="space-y-5"><Panel title="💳 معاملات حية" eyebrow="Maven stream"><div className="max-h-[390px] space-y-2 overflow-auto">{latestTransactions.map((row) => <div key={row.tx_id} className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-3"><div className={`text-lg ${row.status === 'PAID' ? 'text-success' : 'text-warning'}`}>{row.status === 'PAID' ? '●' : '○'}</div><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2 text-sm"><span className="truncate font-bold">{formatMoney(row.amount)} · {row.sender_name || row.sender_number || '—'}</span><span className={`font-bold ${statusTone(row.status)}`}>{row.status}</span></div><div className="mt-1 flex justify-between text-[11px] text-muted"><span>{formatAbsoluteDate(row.updated_at || row.created_utc)}</span><span className="font-mono">#{row.tx_id}</span></div></div></div>)}</div></Panel>
+      <div className="space-y-5"><Panel title="💳 معاملات حية" eyebrow="Maven stream"><div className="max-h-[390px] space-y-2 overflow-auto">{latestTransactions.map((row) => <div key={row.tx_id} className="flex items-center gap-3 rounded-xl border border-border bg-surface px-3 py-3"><div className={`text-lg ${row.status === 'PAID' ? 'text-success' : 'text-warning'}`}>{row.status === 'PAID' ? '●' : '○'}</div><div className="min-w-0 flex-1"><div className="flex items-center justify-between gap-2 text-sm"><span className="truncate font-bold">{formatMoney(row.amount)} · {row.sender_name || row.sender_number || '—'}</span><span className={`font-bold ${statusTone(row.status)}`}>{row.status}</span></div><div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-muted"><PaymentMethodBadge value={row.payment_method} /><span>{formatAbsoluteDate(row.updated_at || row.created_utc)}</span><span className="font-mono">#{row.tx_id}</span></div></div></div>)}</div></Panel>
         <Panel title="🎯 مطابقة تلقائية" eyebrow="TRX + SMS"><div className="space-y-2">{matches.length ? matches.map(({ tx, sms: row }) => <div key={`${tx.tx_id}-${row.id}`} className="rounded-xl border border-success/25 bg-success/5 px-4 py-3"><div className="mb-1 flex items-center justify-between gap-2"><span className="text-sm font-black text-success">💥 تطابق!</span><span className="text-xs text-muted">{formatAbsoluteDate(row.received_at)}</span></div><div className="text-sm font-bold text-text">معاملة #{tx.tx_id} — {formatMoney(tx.amount)}</div><div className="mt-1 text-xs text-muted">{tx.sender_name || tx.sender_number || '—'} · {tx.status === 'PAID' ? '✅ قبول' : '⏳ قيد المعالجة'}</div></div>) : <div className="py-8 text-center text-sm text-muted">بانتظار المطابقات الجديدة</div>}</div></Panel></div></div>
   </div></div>
 }
