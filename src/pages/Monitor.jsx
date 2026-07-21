@@ -54,6 +54,7 @@ export default function Monitor() {
   const [filters, setFilters] = useState(() => loadFilters(PAGE_KEY, DEFAULT_FILTERS))
   const [selectedTx, setSelectedTx] = useState(null)
   const [pageSize, setPageSize] = useState(100)
+  const [txIdDescending, setTxIdDescending] = useState(true)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [lastSync, setLastSync] = useState(null)
   const [search, setSearch] = useState(() => searchParams.get('wallet') || '')
@@ -77,9 +78,9 @@ export default function Monitor() {
   })
 
   const table = useRealtimeTable({
-    key: ['monitor-table', filters, pageSize, search],
+    key: ['monitor-table', filters, pageSize, search, txIdDescending],
     queryFn: async (sb) => {
-      let query = sb.from('maven_transactions').select('*').order('created_utc', { ascending: false }).limit(pageSize)
+      let query = sb.from('maven_transactions').select('*').order('tx_id', { ascending: !txIdDescending }).limit(pageSize)
       if (filters.status) query = query.eq('status', filters.status)
       if (filters.payment_method) query = query.ilike('payment_method', `%${filters.payment_method}%`)
       if (filters.dateFrom) query = query.gte('created_utc', new Date(filters.dateFrom).toISOString())
@@ -433,6 +434,14 @@ export default function Monitor() {
             className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text"
           >
             مسح الفلاتر
+          </button>
+
+          <button
+            onClick={() => setTxIdDescending((descending) => !descending)}
+            className="rounded-lg border border-gold/40 bg-gold/5 px-3 py-2 text-sm font-semibold text-gold hover:bg-gold/10"
+            title="تغيير ترتيب رقم العملية"
+          >
+            TX ID {txIdDescending ? '↓ 9 → 0' : '↑ 0 → 9'}
           </button>
 
           <div className="flex flex-col gap-1">
