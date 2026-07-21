@@ -29,6 +29,7 @@ const ALLOWED_RESOURCES = new Set([
   'v_report_daily',
   'v_report_wallets',
   'v_report_outgoing',
+  'v_automation_stats',
 ])
 
 function readBody(req) {

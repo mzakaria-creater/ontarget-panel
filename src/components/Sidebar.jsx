@@ -18,7 +18,10 @@ const NAV_GROUPS = [
   },
   {
     label: 'الأدوات',
-    items: [{ to: '/recovery', label: 'استرجاع', icon: '⚡', badgeKey: 'recovery' }],
+    items: [
+      { to: '/recovery', label: 'استرجاع', icon: '⚡', badgeKey: 'recovery' },
+      { to: '/recovery-panel', label: 'استرجاع ومراقبة', icon: '🧭' },
+    ],
   },
   {
     label: 'الإعدادات',

@@ -18,6 +18,7 @@ import UsersAdmin from './pages/UsersAdmin'
 import Settlement from './pages/Settlement'
 import AutomationTV from './pages/AutomationTV'
 import WalletFlow from './pages/WalletFlow'
+import RecoveryPanel from './pages/RecoveryPanel'
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
 import { ThemeProvider } from './components/ThemeContext'
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="/users" element={withBoundary(UsersAdmin)} />
               <Route path="/settlement" element={withBoundary(Settlement)} />
               <Route path="/recovery" element={withBoundary(Recovery)} />
+              <Route path="/recovery-panel" element={withBoundary(RecoveryPanel)} />
               <Route path="/wallets" element={withBoundary(Wallets)} />
               <Route path="/wallet-flow" element={withBoundary(WalletFlow)} />
               <Route path="/settings" element={withBoundary(Settings)} />
