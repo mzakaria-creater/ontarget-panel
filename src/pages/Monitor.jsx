@@ -21,6 +21,19 @@ function startOfTodayIso() {
   return d.toISOString()
 }
 
+function referenceValues(tx) {
+  const raw = tx?.maven_raw_row && typeof tx.maven_raw_row === 'object' ? tx.maven_raw_row : tx?.raw && typeof tx.raw === 'object' ? tx.raw : {}
+  return [tx?.trx_id, tx?.trx_reference, tx?.reference1, tx?.reference_1, raw.TrxId, raw.TrxID, raw.trx_id, raw.trx_reference, raw.Reference1, raw.Reference, raw.UTRNumber]
+    .map((value) => String(value ?? '').trim().toLowerCase())
+    .filter((value) => value && value !== 'null' && value !== 'undefined')
+}
+
+function smsReferenceValues(sms) {
+  return [sms?.trx_id, sms?.trx_reference, sms?.reference1, sms?.reference_1]
+    .map((value) => String(value ?? '').trim().toLowerCase())
+    .filter((value) => value && value !== 'null' && value !== 'undefined')
+}
+
 function operationBy(tx, job) {
   const source = String(job?.source || tx?.operation_by || '').toLowerCase()
   if (source.includes('auto') || source.includes('automation') || source.includes('ai') || source.includes('claude') || source.includes('n8n')) return 'AI'
@@ -100,7 +113,7 @@ export default function Monitor() {
 
   const smsQuery = useRealtimeTable({
     key: ['monitor-sms-links'],
-    queryFn: async (sb) => sb.from('inbound_sms').select('id, consumed_by_tx_id, matched_transaction_id, maven_transaction_id, received_at, amount, sender_number, sender_name, receiver_number, device_name, sim_slot, sms_category, balance_after, raw_sms, message, trx_id, trx_reference, match_status, auto_match_score, matched, score, status, review_required, notes').or('consumed_by_tx_id.not.is.null,matched_transaction_id.not.is.null,maven_transaction_id.not.is.null').order('received_at', { ascending: false }).limit(2000),
+    queryFn: async (sb) => sb.from('inbound_sms').select('id, consumed_by_tx_id, matched_transaction_id, maven_transaction_id, received_at, amount, sender_number, sender_name, receiver_number, device_name, sim_slot, sms_category, balance_after, raw_sms, message, trx_id, trx_reference, match_status, auto_match_score, matched, score, status, review_required, notes').order('received_at', { ascending: false }).limit(5000),
     intervalMs: autoRefresh ? 15000 : 0,
   })
 
@@ -251,14 +264,22 @@ export default function Monitor() {
 
   const monitorRows = useMemo(() => {
     const smsByTx = new Map()
+    const smsByReference = new Map()
     for (const sms of smsQuery.data || []) {
       for (const id of [sms.consumed_by_tx_id, sms.matched_transaction_id, sms.maven_transaction_id].filter(Boolean)) {
         if (!smsByTx.has(String(id))) smsByTx.set(String(id), sms)
       }
+      for (const reference of smsReferenceValues(sms)) {
+        if (!smsByReference.has(reference)) smsByReference.set(reference, sms)
+      }
     }
     const jobByTx = new Map()
     for (const job of jobsQuery.data || []) if (!jobByTx.has(String(job.tx_id))) jobByTx.set(String(job.tx_id), job)
-    return (table.data || []).map((row) => ({ ...row, matchedSms: smsByTx.get(String(row.tx_id)) || null, operationJob: jobByTx.get(String(row.tx_id)) || null }))
+    return (table.data || []).map((row) => {
+      const explicitSms = smsByTx.get(String(row.tx_id))
+      const referenceSms = referenceValues(row).map((reference) => smsByReference.get(reference)).find(Boolean)
+      return { ...row, matchedSms: explicitSms || referenceSms || null, inferredTrxMatch: !explicitSms && !!referenceSms, operationJob: jobByTx.get(String(row.tx_id)) || null }
+    })
   }, [table.data, smsQuery.data, jobsQuery.data])
 
   const visibleRows = useMemo(() => {
@@ -310,7 +331,7 @@ export default function Monitor() {
     {
       key: 'sms',
       label: 'SMS',
-      render: (r) => r.matchedSms ? <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-success/15 text-lg text-success" title={`Matched SMS · ${r.matchedSms.match_status || 'Confirmed match'}`} aria-label="Matched SMS">📨</span> : <span className="text-muted">—</span>,
+        render: (r) => r.matchedSms ? <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-success/15 text-lg text-success" title={r.inferredTrxMatch ? 'Matched by TRX reference' : `Matched SMS · ${r.matchedSms.match_status || 'Confirmed match'}`} aria-label="Matched SMS">📨</span> : <span className="text-muted">—</span>,
     },
     {
       key: 'actions',
@@ -466,7 +487,7 @@ export default function Monitor() {
             <div><div className="text-xs text-muted">المستلم</div><div className="mt-1 text-text">{selectedTx.matchedSms.receiver_number || '—'}</div></div>
             <div><div className="text-xs text-muted">الجهاز / الشريحة</div><div className="mt-1 text-text">{selectedTx.matchedSms.device_name || '—'} / {selectedTx.matchedSms.sim_slot || '—'}</div></div>
             <div><div className="text-xs text-muted">الرصيد بعد العملية</div><div className="mt-1 text-text">{formatMoney(selectedTx.matchedSms.balance_after)}</div></div>
-            <div><div className="text-xs text-muted">حالة المطابقة</div><div className="mt-1 font-semibold text-success">{selectedTx.matchedSms.match_status || (selectedTx.matchedSms.matched ? 'مطابقة مؤكدة' : '—')}</div></div>
+            <div><div className="text-xs text-muted">حالة المطابقة</div><div className="mt-1 font-semibold text-success">{selectedTx.inferredTrxMatch ? 'مطابقة TRX مباشرة' : selectedTx.matchedSms.match_status || (selectedTx.matchedSms.matched ? 'مطابقة مؤكدة' : '—')}</div></div>
             <div><div className="text-xs text-muted">درجة المطابقة</div><div className="mt-1 text-text">{selectedTx.matchedSms.auto_match_score || selectedTx.matchedSms.score || '—'}</div></div>
             <div className="col-span-2"><div className="text-xs text-muted">سبب المطابقة / الموافقة</div><div className="mt-1 rounded-lg bg-card p-3 text-sm text-text">{selectedTx.matchedSms.notes || (selectedTx.matchedSms.amount ? `مطابقة المبلغ ${formatMoney(selectedTx.matchedSms.amount)} مع العملية` : 'تم ربط SMS بالمعاملة عبر رقم العملية')}</div></div>
             <div className="col-span-2"><div className="text-xs text-muted">نص الرسالة</div><div className="mt-1 max-h-24 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-card p-3 text-xs text-text">{selectedTx.matchedSms.raw_sms || selectedTx.matchedSms.message || '—'}</div></div>
