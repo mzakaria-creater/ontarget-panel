@@ -3,16 +3,9 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY
 
-const proxiedFetch = (input, init) => {
-  const target = new URL(input instanceof Request ? input.url : input, window.location.origin)
-  if (target.origin === supabaseUrl && target.pathname.startsWith('/rest/v1/')) {
-    const proxyPath = `/api/supabase${target.pathname}${target.search}`
-    if (input instanceof Request && !init) return window.fetch(new Request(proxyPath, input))
-    return window.fetch(proxyPath, init)
-  }
-  return window.fetch(input, init)
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: proxiedFetch } })
+// Table reads use Supabase's public Data API directly. The publishable/anon key
+// is designed for browser use and is constrained by Supabase RLS policies.
+// Sensitive server-only calls continue to use the Vercel API functions.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const FUNCTIONS_URL = `${supabaseUrl}/functions/v1`
