@@ -9,6 +9,7 @@ const NAV_GROUPS = [
     label: 'الرئيسية',
     items: [
       { to: '/monitor', label: 'المراقبة', icon: '📊' },
+      { to: '/tv', label: 'Monitor TV', icon: '📺' },
       { to: '/smslive', label: 'الرسائل المباشرة', icon: '📨' },
       { to: '/complaints', label: 'مهام الشكاوى', icon: '🧩' },
       { to: '/telegram', label: 'Telegram Bot', icon: '🤖' },

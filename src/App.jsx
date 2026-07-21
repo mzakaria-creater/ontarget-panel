@@ -16,6 +16,7 @@ import Complaints from './pages/Complaints'
 import TelegramBot from './pages/TelegramBot'
 import UsersAdmin from './pages/UsersAdmin'
 import Settlement from './pages/Settlement'
+import AutomationTV from './pages/AutomationTV'
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
 import { ThemeProvider } from './components/ThemeContext'
@@ -36,6 +37,7 @@ export default function App() {
               <Route path="/dashboard" element={<Navigate to="/monitor" replace />} />
               <Route path="/transactions" element={<Navigate to="/monitor" replace />} />
               <Route path="/monitor" element={withBoundary(Monitor)} />
+              <Route path="/tv" element={withBoundary(AutomationTV)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />
