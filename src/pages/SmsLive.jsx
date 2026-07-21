@@ -32,6 +32,8 @@ export default function SmsLive() {
   const [filters, setFilters] = useState(() => loadFilters(PAGE_KEY, DEFAULT_FILTERS))
   const [selectedSms, setSelectedSms] = useState(null)
   const [rawDraft, setRawDraft] = useState('')
+  const [linkTxId, setLinkTxId] = useState('')
+  const [linkingTx, setLinkingTx] = useState(false)
   const [savingRaw, setSavingRaw] = useState(false)
   const [freshIds, setFreshIds] = useState(new Set())
   const knownIds = useRef(null)
@@ -124,6 +126,44 @@ export default function SmsLive() {
   const openSms = (row) => {
     setSelectedSms(row)
     setRawDraft(row?.raw_sms || row?.message || '')
+    setLinkTxId('')
+  }
+
+  const manuallyLinkTransaction = async () => {
+    if (!selectedSms || selectedSms.consumed_by_tx_id || selectedSms.matched_transaction_id || selectedSms.maven_transaction_id) return
+    const txId = Number(linkTxId.trim())
+    if (!Number.isSafeInteger(txId) || txId <= 0) {
+      window.alert('أدخل رقم معاملة Maven صحيحاً')
+      return
+    }
+
+    setLinkingTx(true)
+    const { data: tx, error: txError } = await supabase.from('maven_transactions').select('tx_id').eq('tx_id', txId).maybeSingle()
+    if (txError || !tx) {
+      setLinkingTx(false)
+      window.alert(txError?.message || `لم يتم العثور على المعاملة ${txId}`)
+      return
+    }
+
+    const note = `Manual DMD link to Maven transaction ${txId}`
+    const { error } = await supabase.from('inbound_sms').update({
+      matched_transaction_id: txId,
+      maven_transaction_id: txId,
+      matched: true,
+      match_status: 'manual',
+      review_required: false,
+      notes: note,
+    }).eq('id', selectedSms.id)
+    setLinkingTx(false)
+    if (error) {
+      window.alert(`تعذر ربط الرسالة بالمعاملة: ${error.message}`)
+      return
+    }
+
+    setSelectedSms({ ...selectedSms, matched_transaction_id: txId, maven_transaction_id: txId, matched: true, match_status: 'manual', review_required: false, notes: note })
+    setLinkTxId('')
+    table.refresh()
+    linkedTransactions.refresh()
   }
 
   const saveRawSms = async () => {
@@ -303,6 +343,14 @@ export default function SmsLive() {
               {details.map(([label, value]) => <div key={label}><div className="text-xs text-muted">{label}</div><div className="mt-1 break-words font-semibold text-text">{value || '—'}</div></div>)}
             </div>
             {linkedId && <button onClick={() => navigate(`/monitor?tx=${encodeURIComponent(linkedId)}`)} className="rounded-lg border border-gold/40 px-3 py-2 text-sm font-semibold text-gold hover:bg-gold/10">فتح تفاصيل المعاملة المرتبطة</button>}
+            {!linkedId && <div className="rounded-xl border border-gold/30 bg-gold/5 p-4">
+              <div className="mb-2 text-sm font-bold text-gold">DMD — ربط يدوي بالمعاملة</div>
+              <div className="mb-3 text-xs text-muted">إذا لم يتم الربط التلقائي، أدخل رقم معاملة Maven لربط هذه الرسالة بها.</div>
+              <div className="flex flex-wrap gap-2">
+                <input value={linkTxId} onChange={(e) => setLinkTxId(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="رقم معاملة Maven" className="min-w-[220px] flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" />
+                <button onClick={manuallyLinkTransaction} disabled={linkingTx || !linkTxId} className="rounded-lg bg-gold px-3 py-2 text-sm font-bold text-bg disabled:opacity-50">{linkingTx ? 'جارٍ الربط...' : 'ربط بالمعاملة'}</button>
+              </div>
+            </div>}
             <div><div className="mb-2 flex items-center justify-between gap-2"><div className="text-xs font-semibold text-muted">النص الخام الكامل</div><button onClick={saveRawSms} disabled={savingRaw} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">{savingRaw ? 'جارٍ الحفظ...' : 'حفظ التعديل'}</button></div><textarea value={rawDraft} onChange={(e) => setRawDraft(e.target.value)} rows={8} dir="auto" className="w-full rounded-lg border border-border bg-surface p-3 text-sm leading-6 text-text outline-none focus:border-gold" placeholder="لا يوجد نص خام لهذه الرسالة" /></div>
           </div>
         })()}
