@@ -1,0 +1,312 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useRealtimeTable } from '../hooks/useRealtimeTable'
+import { supabase } from '../lib/supabase'
+import { loadFilters, saveFilters } from '../utils/storage'
+import { formatMoney, formatNumber, formatRelativeTime, formatAbsoluteDate } from '../utils/format'
+import Topbar from '../components/Topbar'
+import DataTable from '../components/DataTable'
+import Modal from '../components/Modal'
+
+const PAGE_KEY = 'smslive'
+const DEFAULT_FILTERS = { device_name: '', sms_category: '', provider: '', search: '', date_from: '', date_to: '' }
+const DEVICES = ['ont1', 'ont2', 'ont3', 'ont4', 'ont5', 'ont6']
+
+const CATEGORY_STYLES = {
+  deposit: 'text-success',
+  withdrawal: 'text-danger',
+}
+
+function operationBy(tx) {
+  const raw = tx?.raw && typeof tx.raw === 'object' ? tx.raw : tx?.maven_raw_row && typeof tx.maven_raw_row === 'object' ? tx.maven_raw_row : {}
+  const explicit = tx?.operation_by || raw.operation_by || raw.operationBy || raw.approval_source || raw.source
+  const value = String(explicit || '').toLowerCase()
+  if (value.includes('ai') || value.includes('auto') || value.includes('bot')) return 'AI'
+  if (value.includes('manual') || value.includes('operator') || value.includes('user')) return 'Manual'
+  if (tx?.approved_by) return 'Manual'
+  return 'Maven'
+}
+
+export default function SmsLive() {
+  const navigate = useNavigate()
+  const [filters, setFilters] = useState(() => loadFilters(PAGE_KEY, DEFAULT_FILTERS))
+  const [selectedSms, setSelectedSms] = useState(null)
+  const [rawDraft, setRawDraft] = useState('')
+  const [savingRaw, setSavingRaw] = useState(false)
+  const [freshIds, setFreshIds] = useState(new Set())
+  const knownIds = useRef(null)
+
+  const updateFilter = (patch) => {
+    const next = { ...filters, ...patch }
+    setFilters(next)
+    saveFilters(PAGE_KEY, next)
+  }
+
+  const table = useRealtimeTable({
+    key: ['smslive-table', filters],
+    queryFn: async (sb) => {
+      let query = sb.from('inbound_sms').select('id, sender, message, wallet, amount, trx_reference, provider, matched, suspicious, score, status, processed_at, created_at, merchant_name, sub_merchant_name, client_name, wallet_name, receiver_number, sender_number, sender_name, balance_after, trx_id, sms_first_line, sms_category, matched_transaction_id, match_status, auto_match_score, review_required, assigned_operator, raw_sms, device_name, sim_slot, received_at, maven_transaction_id, maven_status_sent, consumed_by_tx_id, confirmed_wallet_number').order('received_at', { ascending: false, nullsFirst: false }).limit(5000)
+      if (filters.device_name) query = query.eq('device_name', filters.device_name)
+      if (filters.sms_category) query = query.eq('sms_category', filters.sms_category)
+      if (filters.provider) query = query.ilike('provider', `%${filters.provider}%`)
+      if (filters.date_from) query = query.gte('received_at', `${filters.date_from}T00:00:00`)
+      if (filters.date_to) {
+        const end = new Date(`${filters.date_to}T00:00:00`)
+        end.setDate(end.getDate() + 1)
+        query = query.lt('received_at', end.toISOString())
+      }
+      return query
+    },
+    intervalMs: 5000,
+  })
+
+  useEffect(() => {
+    if (!table.data) return
+    const currentIds = new Set(table.data.map((r) => r.id))
+
+    if (knownIds.current === null) {
+      knownIds.current = currentIds
+      return
+    }
+
+    const newlyArrived = table.data.filter((r) => !knownIds.current.has(r.id)).map((r) => r.id)
+    knownIds.current = currentIds
+
+    if (newlyArrived.length > 0) {
+      setFreshIds((prev) => new Set([...prev, ...newlyArrived]))
+      const timer = setTimeout(() => {
+        setFreshIds((prev) => {
+          const next = new Set(prev)
+          newlyArrived.forEach((id) => next.delete(id))
+          return next
+        })
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [table.data])
+
+  const smsRows = useMemo(() => {
+    const term = filters.search.trim().toLowerCase()
+    const sorted = [...(table.data || [])]
+      .filter((row) => !term || [row.message, row.raw_sms, row.sender, row.sender_number, row.receiver_number, row.trx_id, row.trx_reference, row.maven_transaction_id, row.consumed_by_tx_id, row.device_name].some((value) => String(value ?? '').toLowerCase().includes(term)))
+      .sort((a, b) => new Date(b.received_at || b.created_at || 0).getTime() - new Date(a.received_at || a.created_at || 0).getTime())
+    const firstDepositByCustomer = new Set()
+    const seenCustomers = new Set()
+    for (const row of [...sorted].reverse()) {
+      if (row.sms_category !== 'deposit') continue
+      const customer = row.sender_number || row.sender || row.client_id || row.sender_name || `sms-${row.id}`
+      if (!seenCustomers.has(String(customer))) {
+        seenCustomers.add(String(customer))
+        firstDepositByCustomer.add(String(row.id))
+      }
+    }
+    return sorted.map((row) => ({ ...row, deposit_type: row.sms_category === 'deposit' ? (firstDepositByCustomer.has(String(row.id)) ? 'first' : 'retention') : null }))
+  }, [table.data, filters.search])
+  const linkedTxIds = useMemo(() => [...new Set((table.data || []).flatMap((row) => [row.consumed_by_tx_id, row.matched_transaction_id, row.maven_transaction_id].filter((value) => /^\d+$/.test(String(value ?? ''))).map(String)))], [table.data])
+  const linkedTransactions = useRealtimeTable({
+    key: ['smslive-linked-transactions', linkedTxIds.join(',')],
+    queryFn: async (sb) => {
+      if (!linkedTxIds.length) return { data: [], error: null }
+      return sb.from('maven_transactions').select('tx_id, status, amount, approved_by, created_utc, modified_utc, updated_at, sender_name, sender_number, payment_method, merchant, sub_merchant, proof_image_url, raw, maven_raw_row').in('tx_id', linkedTxIds).limit(5000)
+    },
+    intervalMs: 5000,
+    enabled: linkedTxIds.length > 0,
+  })
+  const transactionById = useMemo(() => new Map((linkedTransactions.data || []).map((tx) => [String(tx.tx_id), tx])), [linkedTransactions.data])
+  const providers = useMemo(() => [...new Set((table.data || []).map((row) => row.provider).filter(Boolean))].sort(), [table.data])
+  const devices = useMemo(() => [...new Set([...DEVICES, ...(table.data || []).map((row) => row.device_name).filter(Boolean)])].sort(), [table.data])
+  const latestSms = smsRows[0] || null
+  const deposits = smsRows.filter((row) => row.sms_category === 'deposit').length
+  const withdrawals = smsRows.filter((row) => row.sms_category === 'withdrawal').length
+  const firstDeposits = smsRows.filter((row) => row.deposit_type === 'first').length
+  const retentionDeposits = smsRows.filter((row) => row.deposit_type === 'retention').length
+
+  const openSms = (row) => {
+    setSelectedSms(row)
+    setRawDraft(row?.raw_sms || row?.message || '')
+  }
+
+  const saveRawSms = async () => {
+    if (!selectedSms) return
+    setSavingRaw(true)
+    const { error } = await supabase.from('inbound_sms').update({ raw_sms: rawDraft }).eq('id', selectedSms.id)
+    setSavingRaw(false)
+    if (error) {
+      window.alert(`تعذر حفظ النص الخام: ${error.message}`)
+      return
+    }
+    setSelectedSms({ ...selectedSms, raw_sms: rawDraft })
+    const linkedTxId = selectedSms.consumed_by_tx_id || selectedSms.matched_transaction_id || selectedSms.maven_transaction_id
+    if (linkedTxId) await supabase.from('maven_transaction_history').insert({ tx_id: linkedTxId, status: transactionById.get(String(linkedTxId))?.status || '—', amount: transactionById.get(String(linkedTxId))?.amount || selectedSms.amount, raw: { action: 'edit_sms_raw', sms_id: selectedSms.id, performed_by: 'Manual', occurred_at: new Date().toISOString() }, status_changed: false, source: 'dashboard' })
+    table.refresh()
+  }
+
+  const columns = [
+    { key: 'id', label: '#' },
+    {
+      key: 'received_at',
+      label: 'الوقت',
+      render: (r) => <span title={formatAbsoluteDate(r.received_at || r.created_at)}>{formatAbsoluteDate(r.received_at || r.created_at)}</span>,
+    },
+    {
+      key: 'sms_category',
+      label: 'النوع',
+      render: (r) => (
+        <span className={`font-semibold ${CATEGORY_STYLES[r.sms_category] || 'text-muted'}`}>
+          {r.sms_category === 'deposit' ? 'إيداع' : r.sms_category === 'withdrawal' ? 'سحب' : r.sms_category}
+        </span>
+      ),
+    },
+    { key: 'deposit_type', label: 'تصنيف الإيداع', render: (r) => r.deposit_type === 'first' ? <span className="font-semibold text-gold">إيداع أول</span> : r.deposit_type === 'retention' ? <span className="font-semibold text-violet-600">إيداع احتفاظ</span> : '—' },
+    { key: 'device_name', label: 'الجهاز' },
+    { key: 'sim_slot', label: 'الشريحة' },
+    { key: 'counterparty', label: 'من/إلى', render: (r) => <span title={`${r.sender_name || ''} ${r.sender_number || ''}`}>{r.sender_name || r.sender_number || r.receiver_number || r.sender || '—'}</span> },
+    { key: 'receiving_wallet', label: '🏦 محفظة الاستقبال', render: (r) => r.confirmed_wallet_number || r.wallet_name || r.wallet || '—' },
+    { key: 'transaction_reference', label: 'رقم العملية', render: (r) => r.trx_id || r.trx_reference || r.maven_transaction_id || r.consumed_by_tx_id || '—' },
+    { key: 'message', label: 'نص الرسالة', render: (r) => <span className="block max-w-[320px] truncate" title={r.message || r.raw_sms || r.sms_first_line}>{r.message || r.raw_sms || r.sms_first_line || '—'}</span> },
+    { key: 'balance_after', label: 'الرصيد بعدها', render: (r) => formatMoney(r.balance_after) },
+    {
+      key: 'consumed_by_tx_id',
+      label: 'معاملة مرتبطة',
+      render: (r) => {
+        const id = r.consumed_by_tx_id || r.matched_transaction_id || r.maven_transaction_id
+        const tx = id ? transactionById.get(String(id)) : null
+        return id ? <button onClick={(event) => { event.stopPropagation(); navigate(`/monitor?tx=${encodeURIComponent(id)}`) }} className={`underline decoration-dotted underline-offset-2 hover:text-gold ${tx ? 'font-semibold text-success' : 'text-gold'}`}>{tx?.status ? `${id} · ${tx.status}` : id}</button> : <span className="text-muted">غير مرتبطة</span>
+      },
+    },
+    { key: 'approved_by', label: '👤 من وافق', render: (r) => {
+      const id = r.consumed_by_tx_id || r.matched_transaction_id || r.maven_transaction_id
+      return transactionById.get(String(id))?.approved_by || <span className="text-muted">—</span>
+    } },
+    { key: 'operation_by', label: 'طريقة التنفيذ', render: (r) => {
+      const id = r.consumed_by_tx_id || r.matched_transaction_id || r.maven_transaction_id
+      const tx = transactionById.get(String(id))
+      const value = operationBy(tx)
+      return <span className={value === 'AI' ? 'font-semibold text-violet-600' : value === 'Manual' ? 'font-semibold text-gold' : 'font-semibold text-success'}>{value}</span>
+    } },
+  ]
+
+  return (
+    <div className="flex h-full flex-col bg-bg">
+      <Topbar title="SMS Live" subtitle={`${formatNumber(smsRows.length)} رسالة SMS — الأحدث أولاً · تحديث كل 5 ثواني`} smsNotifications={smsRows.slice(0, 9).map((sms) => ({ id: sms.id, title: `SMS #${sms.id} · ${sms.sender_name || 'مرسل غير معروف'}`, body: `${sms.sender_number || 'بدون رقم'} · ${formatMoney(sms.amount)} · ${sms.device_name || 'بدون جهاز'}` }))} onRefresh={table.refresh} isFetching={table.isFetching} />
+
+      <div className="flex-1 space-y-5 overflow-y-auto p-6">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
+          <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">كل رسائل SMS — جدول شامل</div><div className="mt-2 text-2xl font-bold text-text">{formatNumber(smsRows.length)}</div><div className="mt-1 text-xs text-muted">تحديث كل 5 ثواني</div></div>
+          <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">إيداعات</div><div className="mt-2 text-2xl font-bold text-success">{formatNumber(deposits)}</div><div className="mt-1 text-xs text-muted">رسائل واردة</div></div>
+          <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">سحوبات</div><div className="mt-2 text-2xl font-bold text-danger">{formatNumber(withdrawals)}</div><div className="mt-1 text-xs text-muted">رسائل واردة</div></div>
+          <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">إيداع أول</div><div className="mt-2 text-2xl font-bold text-gold">{formatNumber(firstDeposits)}</div><div className="mt-1 text-xs text-muted">أول إيداع للعميل</div></div>
+          <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">إيداع احتفاظ</div><div className="mt-2 text-2xl font-bold text-violet-600">{formatNumber(retentionDeposits)}</div><div className="mt-1 text-xs text-muted">إيداعات لاحقة</div></div>
+          <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">آخر وصول</div><div className="mt-2 text-sm font-bold text-gold">{latestSms ? formatAbsoluteDate(latestSms.received_at) : '—'}</div><div className="mt-1 text-xs text-muted">{latestSms ? formatRelativeTime(latestSms.received_at) : 'بانتظار البيانات'}</div></div>
+        </div>
+
+        {latestSms && <button onClick={() => openSms(latestSms)} className="w-full rounded-2xl border border-gold/30 bg-gradient-to-r from-gold/10 via-card to-card p-5 text-left transition hover:border-gold/60">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/15 text-xl">📨</span><div><div className="text-xs font-bold uppercase tracking-wider text-gold">آخر رسالة مستلمة</div><div className="mt-1 text-sm font-bold text-text">#{latestSms.id} · {formatAbsoluteDate(latestSms.received_at)}</div></div></div><span className={`rounded-full px-3 py-1 text-xs font-bold ${latestSms.sms_category === 'withdrawal' ? 'bg-danger/15 text-danger' : 'bg-success/15 text-success'}`}>{latestSms.sms_category === 'withdrawal' ? 'سحب' : 'إيداع'}</span></div>
+          <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-5"><div><div className="text-xs text-muted">المبلغ</div><div className="mt-1 font-bold text-gold">{formatMoney(latestSms.amount)}</div></div><div><div className="text-xs text-muted">المرسل</div><div className="mt-1 text-text">{latestSms.sender_name || latestSms.sender_number || '—'}</div></div><div><div className="text-xs text-muted">الجهاز</div><div className="mt-1 text-text">{latestSms.device_name || '—'}</div></div><div><div className="text-xs text-muted">الشريحة</div><div className="mt-1 text-text">{latestSms.sim_slot || '—'}</div></div><div><div className="text-xs text-muted">الربط</div><div className="mt-1 text-text">{latestSms.consumed_by_tx_id || 'غير مرتبطة'}</div></div></div>
+        </button>}
+
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">الجهاز</label>
+            <select
+              value={filters.device_name}
+              onChange={(e) => updateFilter({ device_name: e.target.value })}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+            >
+              <option value="">الكل</option>
+              {devices.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex min-w-[240px] flex-1 flex-col gap-1">
+            <label className="text-xs text-muted">بحث بالنص، الرقم، رقم العملية...</label>
+            <input value={filters.search} onChange={(e) => updateFilter({ search: e.target.value })} placeholder="بحث بالنص، الرقم، رقم العملية..." className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text placeholder:text-muted" />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">النوع</label>
+            <select
+              value={filters.sms_category}
+              onChange={(e) => updateFilter({ sms_category: e.target.value })}
+              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"
+            >
+              <option value="">الكل</option>
+              <option value="deposit">إيداع</option>
+              <option value="withdrawal">سحب</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">مزود الخدمة</label>
+            <select value={filters.provider} onChange={(e) => updateFilter({ provider: e.target.value })} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text">
+              <option value="">🏦 كل المزوّدين</option>
+              {providers.map((provider) => <option key={provider} value={provider}>{provider}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">من</label>
+            <input type="date" value={filters.date_from} onChange={(e) => updateFilter({ date_from: e.target.value })} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">إلى</label>
+            <input type="date" value={filters.date_to} onChange={(e) => updateFilter({ date_to: e.target.value })} className="rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" />
+          </div>
+
+          <button
+            onClick={() => updateFilter(DEFAULT_FILTERS)}
+            className="rounded-lg border border-border px-3 py-2 text-sm text-muted hover:text-text"
+          >
+            مسح الفلاتر
+          </button>
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={smsRows}
+          loading={table.isLoading}
+          error={table.error}
+          onRowClick={openSms}
+          rowClassName={(row) => (freshIds.has(row.id) ? 'animate-flash-gold' : '')}
+          emptyEmoji="📨"
+          emptyTitle="لا توجد رسائل"
+          emptySubtitle="بانتظار وصول رسائل SMS جديدة"
+        />
+      </div>
+
+      <Modal open={!!selectedSms} onClose={() => setSelectedSms(null)} title={`تفاصيل SMS #${selectedSms?.id || ''}`}>
+        {selectedSms && (() => {
+          const linkedId = selectedSms.consumed_by_tx_id || selectedSms.matched_transaction_id || selectedSms.maven_transaction_id
+          const tx = linkedId ? transactionById.get(String(linkedId)) : null
+          const details = [
+            ['الجهاز', selectedSms.device_name],
+            ['النوع', selectedSms.sms_category === 'deposit' ? (selectedSms.deposit_type === 'first' ? 'إيداع أول' : 'إيداع احتفاظ') : selectedSms.sms_category === 'withdrawal' ? 'سحب' : selectedSms.sms_category],
+            ['المبلغ', formatMoney(selectedSms.amount)],
+            ['من/إلى', selectedSms.sender_name || selectedSms.sender_number || selectedSms.receiver_number],
+            ['محفظة الاستقبال', selectedSms.confirmed_wallet_number || selectedSms.wallet_name || selectedSms.wallet],
+            ['رقم العملية', selectedSms.trx_id || selectedSms.trx_reference || selectedSms.maven_transaction_id],
+            ['معاملة مرتبطة', linkedId],
+            ['حالة المعاملة', tx?.status],
+            ['من وافق', tx?.approved_by],
+            ['طريقة التنفيذ', operationBy(tx)],
+            ['وقت SMS', formatAbsoluteDate(selectedSms.received_at || selectedSms.created_at)],
+            ['الرصيد بعدها', formatMoney(selectedSms.balance_after)],
+          ]
+          return <div className="space-y-4">
+            {tx?.proof_image_url && <div className="rounded-xl border border-border bg-surface p-3"><div className="mb-2 text-xs font-semibold text-muted">إثبات المعاملة</div><a href={tx.proof_image_url} target="_blank" rel="noreferrer"><img src={tx.proof_image_url} alt="إثبات المعاملة" className="max-h-80 w-full rounded-lg object-contain" /></a></div>}
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-surface p-4 text-sm md:grid-cols-3">
+              {details.map(([label, value]) => <div key={label}><div className="text-xs text-muted">{label}</div><div className="mt-1 break-words font-semibold text-text">{value || '—'}</div></div>)}
+            </div>
+            {linkedId && <button onClick={() => navigate(`/monitor?tx=${encodeURIComponent(linkedId)}`)} className="rounded-lg border border-gold/40 px-3 py-2 text-sm font-semibold text-gold hover:bg-gold/10">فتح تفاصيل المعاملة المرتبطة</button>}
+            <div><div className="mb-2 flex items-center justify-between gap-2"><div className="text-xs font-semibold text-muted">النص الخام الكامل</div><button onClick={saveRawSms} disabled={savingRaw} className="rounded-lg bg-gold px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">{savingRaw ? 'جارٍ الحفظ...' : 'حفظ التعديل'}</button></div><textarea value={rawDraft} onChange={(e) => setRawDraft(e.target.value)} rows={8} dir="auto" className="w-full rounded-lg border border-border bg-surface p-3 text-sm leading-6 text-text outline-none focus:border-gold" placeholder="لا يوجد نص خام لهذه الرسالة" /></div>
+          </div>
+        })()}
+      </Modal>
+    </div>
+  )
+}
