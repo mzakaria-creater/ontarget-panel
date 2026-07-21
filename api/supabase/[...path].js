@@ -45,7 +45,7 @@ export default async function handler(req, res) {
     const requestUrl = new URL(req.url || '/', 'http://vercel.local')
     const rewrittenPath = requestUrl.searchParams.get('path')
     const rawPath = (rewrittenPath || requestUrl.pathname.replace(/^\/api\/supabase/, '')).split('?')[0]
-    const resourcePath = rawPath.replace(/^\/rest\/v1\//, '').split('/')[0]
+    const resourcePath = rawPath.replace(/^\/rest\/v1\//, '').replace(/^\/+/, '').split('/')[0]
     if (!ALLOWED_RESOURCES.has(resourcePath)) {
       res.status(400).json({ error: 'Unsupported Supabase resource' })
       return
