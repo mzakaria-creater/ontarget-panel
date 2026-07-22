@@ -43,6 +43,7 @@ const NAV_GROUPS = [
       { to: '/wallet-flow', label: 'حركة المحافظ', icon: '💰' },
       { to: '/mavenwallets', label: 'محافظ Maven', icon: '🏦' },
       { to: '/maven-payouts', label: 'Maven Payout TRX + Raw', icon: '💸' },
+      { to: '/withdrawal-sms', label: 'Withdrawal SMS queue', icon: '💸' },
       { to: '/hub', label: 'Treasury & Wallets', icon: '🏛️' },
       { to: '/hub/finance', label: 'Hub Finance', icon: '💰' },
       { to: '/wallet-sms-report', label: 'تقرير SMS للمحافظ', icon: '📊' },
