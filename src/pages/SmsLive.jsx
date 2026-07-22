@@ -9,6 +9,7 @@ import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 import { dedupeSms } from '../utils/smsDedupe'
+import { smsAmountOf } from '../utils/smsAmount'
 
 const PAGE_KEY = 'smslive'
 const DEFAULT_FILTERS = { device_name: '', sms_category: '', provider: '', search: '', date_from: '', date_to: '' }
@@ -293,7 +294,7 @@ export default function SmsLive() {
     { key: 'deposit_type', label: 'تصنيف الإيداع', render: (r) => r.deposit_type === 'first' ? <span className="font-semibold text-gold">إيداع أول</span> : r.deposit_type === 'retention' ? <span className="font-semibold text-violet-600">إيداع احتفاظ</span> : '—' },
     { key: 'device_name', label: 'الجهاز' },
     { key: 'sim_slot', label: 'الشريحة' },
-    { key: 'sms_amount', label: 'المبلغ', render: (r) => <span className="font-semibold text-gold">{formatMoney(r.amount)}</span> },
+    { key: 'sms_amount', label: 'المبلغ', render: (r) => <span className="font-semibold text-gold">{formatMoney(smsAmountOf(r))}</span> },
     { key: 'sms_sender_name', label: 'اسم المرسل', render: (r) => r.sender_name || '—' },
     { key: 'sms_sender_number', label: 'رقم الهاتف', render: (r) => r.sender_number || '—' },
     { key: 'counterparty', label: 'من/إلى', render: (r) => <span title={`${r.sender_name || ''} ${r.sender_number || ''}`}>{r.sender_name || r.sender_number || r.receiver_number || r.sender || '—'}</span> },
