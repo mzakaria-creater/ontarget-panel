@@ -27,6 +27,34 @@ function operationBy(tx) {
   return 'Maven'
 }
 
+const JOB_STATE_LABELS = { pending: 'قيد الانتظار', locked: 'قيد التنفيذ', completed: 'مكتمل', failed: 'فشل' }
+
+const TRACE_TONES = {
+  success: { dot: 'bg-success text-white', text: 'text-success', line: 'bg-success/40' },
+  warning: { dot: 'bg-gold text-bg', text: 'text-gold', line: 'bg-gold/40' },
+  danger: { dot: 'bg-danger text-white', text: 'text-danger', line: 'bg-danger/40' },
+  muted: { dot: 'border border-border bg-surface text-muted', text: 'text-muted', line: 'bg-border' },
+}
+
+function TraceStep({ icon, label, tone = 'muted', time, children, last = false }) {
+  const t = TRACE_TONES[tone] || TRACE_TONES.muted
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${t.dot}`}>{icon}</div>
+        {!last && <div className={`mt-1 w-0.5 flex-1 ${t.line}`} />}
+      </div>
+      <div className={`flex-1 ${last ? '' : 'pb-5'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className={`text-sm font-bold ${t.text}`}>{label}</div>
+          {time && <div className="text-xs text-muted">{time}</div>}
+        </div>
+        <div className="mt-1 text-sm leading-6 text-text">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 export default function SmsLive() {
   const navigate = useNavigate()
   const [filters, setFilters] = useState(() => loadFilters(PAGE_KEY, DEFAULT_FILTERS))
@@ -115,6 +143,19 @@ export default function SmsLive() {
     enabled: linkedTxIds.length > 0,
   })
   const transactionById = useMemo(() => new Map((linkedTransactions.data || []).map((tx) => [String(tx.tx_id), tx])), [linkedTransactions.data])
+  const selectedLinkedTxId = selectedSms ? (selectedSms.consumed_by_tx_id || selectedSms.matched_transaction_id || selectedSms.maven_transaction_id) : null
+  const reviewQuery = useRealtimeTable({
+    key: ['smslive-review-queue', selectedLinkedTxId],
+    queryFn: async (sb) => sb.from('review_queue').select('*').eq('tx_id', selectedLinkedTxId).order('created_at', { ascending: false }),
+    intervalMs: 0,
+    enabled: !!selectedLinkedTxId,
+  })
+  const jobsQuery = useRealtimeTable({
+    key: ['smslive-browser-jobs', selectedLinkedTxId],
+    queryFn: async (sb) => sb.from('browser_jobs').select('id, tx_id, source, target_status, state, created_at, completed_at, maven_before_status, maven_after_status, last_error').eq('tx_id', selectedLinkedTxId).order('created_at', { ascending: false }),
+    intervalMs: 0,
+    enabled: !!selectedLinkedTxId,
+  })
   const providers = useMemo(() => [...new Set((table.data || []).map((row) => row.provider).filter(Boolean))].sort(), [table.data])
   const devices = useMemo(() => [...new Set([...DEVICES, ...(table.data || []).map((row) => row.device_name).filter(Boolean)])].sort(), [table.data])
   const latestSms = smsRows[0] || null
@@ -200,6 +241,9 @@ export default function SmsLive() {
     { key: 'deposit_type', label: 'تصنيف الإيداع', render: (r) => r.deposit_type === 'first' ? <span className="font-semibold text-gold">إيداع أول</span> : r.deposit_type === 'retention' ? <span className="font-semibold text-violet-600">إيداع احتفاظ</span> : '—' },
     { key: 'device_name', label: 'الجهاز' },
     { key: 'sim_slot', label: 'الشريحة' },
+    { key: 'sms_amount', label: 'المبلغ', render: (r) => <span className="font-semibold text-gold">{formatMoney(r.amount)}</span> },
+    { key: 'sms_sender_name', label: 'اسم المرسل', render: (r) => r.sender_name || '—' },
+    { key: 'sms_sender_number', label: 'رقم الهاتف', render: (r) => r.sender_number || '—' },
     { key: 'counterparty', label: 'من/إلى', render: (r) => <span title={`${r.sender_name || ''} ${r.sender_number || ''}`}>{r.sender_name || r.sender_number || r.receiver_number || r.sender || '—'}</span> },
     { key: 'receiving_wallet', label: '🏦 محفظة الاستقبال', render: (r) => r.confirmed_wallet_number || r.wallet_name || r.wallet || '—' },
     { key: 'transaction_reference', label: 'رقم العملية', render: (r) => r.trx_id || r.trx_reference || r.maven_transaction_id || r.consumed_by_tx_id || '—' },
@@ -337,7 +381,48 @@ export default function SmsLive() {
             ['وقت SMS', formatAbsoluteDate(selectedSms.received_at || selectedSms.created_at)],
             ['الرصيد بعدها', formatMoney(selectedSms.balance_after)],
           ]
+          const matchScore = selectedSms.auto_match_score ?? selectedSms.score
+          const isMatched = selectedSms.matched === true || selectedSms.match_status === 'matched' || selectedSms.match_status === 'manual'
+          const matchTone = isMatched ? 'success' : selectedSms.review_required ? 'warning' : matchScore != null ? 'warning' : 'muted'
+          const matchLabel = isMatched ? (selectedSms.match_status === 'manual' ? 'مطابقة يدوية' : 'مطابقة تلقائية') : selectedSms.review_required ? 'بانتظار المراجعة' : 'غير مطابقة'
+          const sameAsOurWallet = !!selectedSms.sender_number && [selectedSms.confirmed_wallet_number, selectedSms.wallet, selectedSms.receiver_number].some((v) => v && String(v) === String(selectedSms.sender_number))
+
+          const jobs = jobsQuery.data || []
+          const latestJob = jobs[0]
+          const automationTone = !jobs.length ? 'muted' : latestJob.state === 'completed' ? 'success' : latestJob.state === 'failed' ? 'danger' : 'warning'
+
+          const reviews = reviewQuery.data || []
+          const latestReview = reviews[0]
+          const reviewDecision = latestReview?.decision || latestReview?.target_status
+          const reviewTone = !reviews.length ? 'muted' : /approve|paid|confirm/i.test(reviewDecision || '') ? 'success' : /declin|reject/i.test(reviewDecision || '') ? 'danger' : 'warning'
+
+          const reportTone = tx?.status === 'PAID' ? 'success' : tx?.status === 'DECLINED' ? 'danger' : tx ? 'warning' : 'muted'
+          const reportIcon = tx?.status === 'PAID' ? '✔' : tx?.status === 'DECLINED' ? '✕' : '…'
+
           return <div className="space-y-4">
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <div className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">مسار المعاملة — من الاستلام حتى التقرير</div>
+              <TraceStep icon="1" label="استلام SMS" tone="success" time={formatAbsoluteDate(selectedSms.received_at || selectedSms.created_at)}>
+                {selectedSms.device_name || '—'} · شريحة {selectedSms.sim_slot || '—'} · {formatMoney(selectedSms.amount)} من {selectedSms.sender_name || selectedSms.sender_number || '—'}
+              </TraceStep>
+              <TraceStep icon="2" label="قرار المطابقة" tone={matchTone}>
+                {matchLabel}{matchScore != null ? ` · الدرجة ${matchScore}` : ''}
+                {sameAsOurWallet && <div className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">⚠ الرقم المُطابَق هو رقم محفظتنا وليس رقم العميل — يحتاج مراجعة يدوية</div>}
+              </TraceStep>
+              <TraceStep icon="3" label="الأتمتة" tone={automationTone}>
+                {jobs.length
+                  ? jobs.map((j) => <div key={j.id}>{j.source || 'automation'} → {j.target_status || '—'} ({JOB_STATE_LABELS[j.state] || j.state || '—'}){j.last_error ? ` · ${j.last_error}` : ''}</div>)
+                  : 'لا يوجد إجراء آلي مسجل لهذه المعاملة'}
+              </TraceStep>
+              <TraceStep icon="4" label="المراجعة" tone={reviewTone}>
+                {reviews.length
+                  ? reviews.map((r, i) => <div key={i}>{r.decision || r.target_status || '—'}{r.match_score != null ? ` · درجة ${r.match_score}` : ''}{r.decision_reason ? ` · ${r.decision_reason}` : ''}</div>)
+                  : 'لم تدخل هذه المعاملة قائمة المراجعة'}
+              </TraceStep>
+              <TraceStep icon={reportIcon} label="التقرير النهائي" tone={reportTone} last>
+                {tx ? `${tx.status} · ${operationBy(tx)}${tx.approved_by ? ' · ' + tx.approved_by : ''}` : 'بانتظار قرار نهائي على المعاملة'}
+              </TraceStep>
+            </div>
             {tx?.proof_image_url && <div className="rounded-xl border border-border bg-surface p-3"><div className="mb-2 text-xs font-semibold text-muted">إثبات المعاملة</div><a href={tx.proof_image_url} target="_blank" rel="noreferrer"><img src={tx.proof_image_url} alt="إثبات المعاملة" className="max-h-80 w-full rounded-lg object-contain" /></a></div>}
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-surface p-4 text-sm md:grid-cols-3">
               {details.map(([label, value]) => <div key={label}><div className="text-xs text-muted">{label}</div><div className="mt-1 break-words font-semibold text-text">{value || '—'}</div></div>)}
