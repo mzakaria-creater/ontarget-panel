@@ -28,7 +28,10 @@ export default function MavenPayouts() {
   }), [all, search, status])
   const openRaw = (row) => { setEditing(row); setRawText(JSON.stringify(rawOf(row), null, 2)) }
   const toggle = (key) => setSelected((current) => { const next = new Set(current); next.has(key) ? next.delete(key) : next.add(key); return next })
-  const toggleAll = (checked) => setSelected((current) => checked ? new Set([...current, ...rows.map((row) => String(row.tx_id))]) : new Set([...current].filter((key) => !rows.some((row) => String(row.tx_id) === key)))
+  const toggleAll = (checked) => setSelected((current) => {
+    if (checked) return new Set([...current, ...rows.map((row) => String(row.tx_id))])
+    return new Set([...current].filter((key) => !rows.some((row) => String(row.tx_id) === key)))
+  })
   async function saveRaw() {
     if (!editing) return
     let parsed
