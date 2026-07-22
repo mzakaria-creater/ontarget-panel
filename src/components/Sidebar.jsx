@@ -23,6 +23,7 @@ const NAV_GROUPS = [
       { to: '/recovery-panel', label: 'استرجاع ومراقبة', icon: '🧭' },
       { to: '/wallet-monitor', label: 'مراقبة المحافظ', icon: '📱' },
       { to: '/mavenwallets', label: 'محافظ Maven', icon: '🏦' },
+      { to: '/health', label: 'صحة النظام', icon: '🩺' },
     ],
   },
   {
