@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import TableSkeleton from './Skeleton'
 import EmptyState from './EmptyState'
+import TablePagination from './TablePagination'
 
 export default function DataTable({
   columns,
@@ -16,7 +18,12 @@ export default function DataTable({
   selectedKeys,
   onToggleRow,
   onToggleAll,
+  paginated = true,
 }) {
+  const [pageSize, setPageSize] = useState(50)
+  const [page, setPage] = useState(1)
+  useEffect(() => setPage(1), [data])
+
   if (loading) return <TableSkeleton columns={columns.length + (selectable ? 1 : 0)} />
 
   if (error) {
@@ -29,7 +36,11 @@ export default function DataTable({
     return <EmptyState emoji={emptyEmoji} title={emptyTitle} subtitle={emptySubtitle} />
   }
 
-  const allSelected = selectable && data.length > 0 && data.every((row, i) => selectedKeys?.has(getRowKey(row, i)))
+  const pageCount = Math.max(1, Math.ceil(data.length / pageSize))
+  const safePage = Math.min(page, pageCount)
+  const visibleData = paginated ? data.slice((safePage - 1) * pageSize, safePage * pageSize) : data
+
+  const allSelected = selectable && visibleData.length > 0 && visibleData.every((row, i) => selectedKeys?.has(getRowKey(row, i)))
 
   return (
     <div className="max-w-full rounded-xl border border-border bg-card">
@@ -55,7 +66,7 @@ export default function DataTable({
           </tr>
         </thead>
         <tbody>
-          {data.map((row, i) => {
+          {visibleData.map((row, i) => {
             const key = getRowKey(row, i)
             return (
               <tr
@@ -86,7 +97,7 @@ export default function DataTable({
       </div>
 
       <div className="space-y-3 p-3 md:hidden">
-        {data.map((row, i) => {
+        {visibleData.map((row, i) => {
           const key = getRowKey(row, i)
           const primary = columns[0]
           const secondary = columns[1]
@@ -105,6 +116,7 @@ export default function DataTable({
           )
         })}
       </div>
+      {paginated && <TablePagination total={data.length} page={safePage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} />}
     </div>
   )
 }
