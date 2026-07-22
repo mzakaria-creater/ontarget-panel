@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { supabase } from '../lib/supabase'
 import { formatAbsoluteDate, formatMoney } from '../utils/format'
