@@ -27,7 +27,6 @@ const GatewayOverview = lazy(() => import('./pages/GatewayOverview'))
 const Payouts = lazy(() => import('./pages/Payouts'))
 const TreasuryHub = lazy(() => import('./pages/TreasuryHub'))
 const ApprovalQueue = lazy(() => import('./pages/ApprovalQueue'))
-const PayoutTransactions = lazy(() => import('./pages/PayoutTransactions'))
 const PayoutTransactionsV2 = lazy(() => import('./pages/PayoutTransactionsV2'))
 import WalletFlow from './pages/WalletFlow'
 const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
