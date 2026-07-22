@@ -7,10 +7,27 @@ import { formatMoney, formatNumber, formatRelativeTime, formatAbsoluteDate } fro
 import Topbar from '../components/Topbar'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
+import { useToast } from '../components/Toast'
 
 const PAGE_KEY = 'smslive'
 const DEFAULT_FILTERS = { device_name: '', sms_category: '', provider: '', search: '', date_from: '', date_to: '' }
 const DEVICES = ['ont1', 'ont2', 'ont3', 'ont4', 'ont5', 'ont6']
+
+function parseCsv(text) {
+  const rows = []; let row = []; let cell = ''; let quoted = false
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index]; const next = text[index + 1]
+    if (char === '"' && quoted && next === '"') { cell += '"'; index += 1; continue }
+    if (char === '"') { quoted = !quoted; continue }
+    if (char === ',' && !quoted) { row.push(cell); cell = ''; continue }
+    if ((char === '\n' || char === '\r') && !quoted) { if (char === '\r' && next === '\n') index += 1; row.push(cell); if (row.some((value) => value.trim())) rows.push(row); row = []; cell = ''; continue }
+    cell += char
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row) }
+  return rows
+}
+
+const csvValue = (row, headers, name) => row[headers.indexOf(name)]?.trim() || ''
 
 const CATEGORY_STYLES = {
   deposit: 'text-success',
@@ -56,6 +73,7 @@ function TraceStep({ icon, label, tone = 'muted', time, children, last = false }
 }
 
 export default function SmsLive() {
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const [filters, setFilters] = useState(() => loadFilters(PAGE_KEY, DEFAULT_FILTERS))
   const [selectedSms, setSelectedSms] = useState(null)
@@ -64,12 +82,39 @@ export default function SmsLive() {
   const [linkingTx, setLinkingTx] = useState(false)
   const [savingRaw, setSavingRaw] = useState(false)
   const [freshIds, setFreshIds] = useState(new Set())
+  const [importing, setImporting] = useState(false)
   const knownIds = useRef(null)
 
   const updateFilter = (patch) => {
     const next = { ...filters, ...patch }
     setFilters(next)
     saveFilters(PAGE_KEY, next)
+  }
+
+  async function importCsv(file) {
+    if (!file) return
+    setImporting(true)
+    try {
+      const records = parseCsv(await file.text())
+      const headerIndex = records.findIndex((row) => row.includes('ID') && row.includes('تاريخ ووقت الاستلام'))
+      if (headerIndex < 0) throw new Error('لم يتم العثور على صف عناوين CSV الصحيح')
+      const headers = records[headerIndex]
+      const existingKeys = new Set((table.data || []).map((row) => `${row.received_at}|${row.sender_number}|${row.amount}|${row.sender_name}`))
+      const payload = records.slice(headerIndex + 1).map((row) => {
+        const received = csvValue(row, headers, 'تاريخ ووقت الاستلام'); const amount = Number(csvValue(row, headers, 'المبلغ (ج)'))
+        const senderNumber = csvValue(row, headers, 'رقم المُرسِل'); const senderName = csvValue(row, headers, 'اسم المُرسِل')
+        const raw = csvValue(row, headers, 'النص الخام الكامل'); const key = `${received}|${senderNumber}|${amount}|${senderName}`
+        return { key, row: { sender: csvValue(row, headers, 'رقم المُرسِل'), sender_number: senderNumber || null, sender_name: senderName || null, amount: Number.isFinite(amount) ? amount : null, balance_after: Number(csvValue(row, headers, 'الرصيد بعدها (ج)')) || null, provider: csvValue(row, headers, 'المزوّد') || 'orange-cash', sms_category: 'deposit', received_at: received ? new Date(received).toISOString() : null, created_at: received ? new Date(received).toISOString() : null, raw_sms: raw || null, message: raw || null, trx_reference: csvValue(row, headers, 'رقم معاملة Orange') || null, device_name: csvValue(row, headers, 'الجهاز') || null, matched: csvValue(row, headers, 'استُخدمت لمعاملة؟') === 'نعم', review_required: csvValue(row, headers, 'الحالة (موثوقة؟)') !== 'موثوقة' } }
+      }).filter(({ row }) => row.received_at && row.amount != null)
+      const fresh = payload.filter(({ key }) => !existingKeys.has(key)).map(({ row }) => row)
+      if (!fresh.length) { showToast('كل سجلات CSV موجودة بالفعل أو غير صالحة', 'success'); return }
+      if (!window.confirm(`استيراد ${fresh.length} رسالة SMS إلى جدول الرسائل؟`)) return
+      for (let index = 0; index < fresh.length; index += 100) {
+        const { error } = await supabase.from('inbound_sms').insert(fresh.slice(index, index + 100))
+        if (error) throw error
+      }
+      showToast(`تم استيراد ${fresh.length} رسالة SMS`, 'success'); table.refresh()
+    } catch (error) { showToast(`فشل استيراد CSV: ${error.message}`, 'error') } finally { setImporting(false) }
   }
 
   const table = useRealtimeTable({
@@ -354,6 +399,10 @@ export default function SmsLive() {
           >
             مسح الفلاتر
           </button>
+          <label className={`cursor-pointer rounded-lg border border-gold/40 px-3 py-2 text-sm font-bold text-gold hover:bg-gold/10 ${importing ? 'pointer-events-none opacity-50' : ''}`}>
+            {importing ? 'جارٍ الاستيراد...' : '⬆ استيراد CSV إلى نفس الجدول'}
+            <input type="file" accept=".csv,text/csv" className="hidden" disabled={importing} onChange={(event) => { importCsv(event.target.files?.[0]); event.target.value = '' }} />
+          </label>
         </div>
 
         <DataTable
