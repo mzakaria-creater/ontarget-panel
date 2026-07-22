@@ -18,6 +18,7 @@ export default function MavenPayouts() {
   const [selected, setSelected] = useState(new Set())
   const [editing, setEditing] = useState(null)
   const [rawText, setRawText] = useState('')
+  const [walletNumber, setWalletNumber] = useState('')
   const [busy, setBusy] = useState(false)
   const query = useRealtimeTable({ key: ['maven-payout-raw'], queryFn: async (sb) => sb.from('maven_transactions').select('*').order('created_utc', { ascending: false }).limit(5000), intervalMs: 15000 })
   const all = useMemo(() => (query.data || []).filter(isPayout), [query.data])
@@ -26,7 +27,8 @@ export default function MavenPayouts() {
     const text = [row.tx_id, row.status, row.amount, row.sender_name, row.sender_number, row.to_account_number, row.payment_method, row.merchant, row.master_merchant, row.sub_merchant, row.external_id].join(' ').toLowerCase()
     return (!status || String(row.status || '').toLowerCase() === status.toLowerCase()) && (!term || text.includes(term))
   }), [all, search, status])
-  const openRaw = (row) => { setEditing(row); setRawText(JSON.stringify(rawOf(row), null, 2)) }
+  const walletOptions = useMemo(() => [...new Set(all.flatMap((row) => [row.to_account_number, row.wallet_number, row.wallet].filter(Boolean).map(String)))].sort(), [all])
+  const openRaw = (row) => { const current = String(row.to_account_number || row.wallet_number || row.wallet || ''); const selectedWallet = window.prompt(`Wallet number correction. Choose/type one:\n${walletOptions.join('\n')}`, current); setEditing(row); setWalletNumber(selectedWallet === null ? current : selectedWallet.trim()); setRawText(JSON.stringify(rawOf(row), null, 2)) }
   const toggle = (key) => setSelected((current) => { const next = new Set(current); next.has(key) ? next.delete(key) : next.add(key); return next })
   const toggleAll = (checked) => setSelected((current) => {
     if (checked) return new Set([...current, ...rows.map((row) => String(row.tx_id))])
@@ -36,8 +38,9 @@ export default function MavenPayouts() {
     if (!editing) return
     let parsed
     try { parsed = JSON.parse(rawText) } catch { showToast('Raw JSON غير صالح', 'error'); return }
+    if (walletNumber) parsed.to_account_number = walletNumber
     setBusy(true)
-    const result = await supabase.from('maven_transactions').update({ raw: parsed, maven_raw_row: parsed }).eq('tx_id', editing.tx_id)
+    const result = await supabase.from('maven_transactions').update({ raw: parsed, maven_raw_row: parsed, ...(walletNumber ? { to_account_number: walletNumber } : {}) }).eq('tx_id', editing.tx_id)
     if (!result.error) await supabase.from('maven_transaction_history').insert({ tx_id: editing.tx_id, status: editing.status, amount: editing.amount, raw: { action: 'edit_full_raw', performed_by: 'Manual', occurred_at: new Date().toISOString() }, source: 'dashboard', status_changed: false })
     setBusy(false)
     if (result.error) { showToast(`فشل حفظ raw: ${result.error.message}`, 'error'); return }

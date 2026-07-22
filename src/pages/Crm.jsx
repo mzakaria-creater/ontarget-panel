@@ -3,6 +3,7 @@ import Topbar from '../components/Topbar'
 import DataTable from '../components/DataTable'
 import { useRealtimeTable } from '../hooks/useRealtimeTable'
 import { formatAbsoluteDate, formatMoney, formatNumber } from '../utils/format'
+import { displayClientName } from '../utils/clientDisplay'
 
 const phoneOf = (row) => row.phone_no || row.normalized_phone || row.phone || row.sender_number || row.client_phone
 
@@ -17,7 +18,7 @@ export default function Crm() {
   const selectClient = (row) => setSelectedPhone(String(phoneOf(row) || ''))
   const columns = [
     { key: 'phone', label: 'Client phone', render: (row) => <span className="font-mono font-bold text-gold">{phoneOf(row) || '—'}</span> },
-    { key: 'name', label: 'Client', render: (row) => row.client_name || row.sender_name || '—' },
+    { key: 'name', label: 'Client', render: (row) => displayClientName(row.sender_name, row.client_name) || '—' },
     { key: 'total_deposit', label: 'Total deposit', render: (row) => formatMoney(row.total_deposit) },
     { key: 'total_withdrawal', label: 'Total withdrawal', render: (row) => formatMoney(row.total_withdrawal) },
     { key: 'net_balance', label: 'Net', render: (row) => <b className={Number(row.net_balance || Number(row.total_deposit || 0) - Number(row.total_withdrawal || 0)) >= 0 ? 'text-success' : 'text-danger'}>{formatMoney(row.net_balance ?? Number(row.total_deposit || 0) - Number(row.total_withdrawal || 0))}</b> },

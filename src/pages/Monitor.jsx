@@ -9,6 +9,7 @@ import StatCard from '../components/StatCard'
 import DataTable from '../components/DataTable'
 import Badge from '../components/Badge'
 import PaymentMethodBadge from '../components/PaymentMethodBadge'
+import { displayClientName, displayClientPhone } from '../utils/clientDisplay'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 import SystemPulse from '../components/SystemPulse'
@@ -316,8 +317,8 @@ export default function Monitor() {
   const columns = [
     { key: 'tx_id', label: 'رقم العملية' },
     { key: 'amount', label: 'المبلغ', render: (r) => formatMoney(r.amount) },
-    { key: 'sender_number', label: 'رقم المرسل', render: (r) => r.sender_number ? <button onClick={(e) => { e.stopPropagation(); setSelectedPhone(r.sender_number) }} className="font-mono text-gold underline decoration-gold/30 underline-offset-2 hover:text-gold/80">{r.sender_number}</button> : '—' },
-    { key: 'sender_name', label: 'اسم المرسل' },
+    { key: 'sender_number', label: 'رقم المرسل', render: (r) => displayClientPhone(r) ? <button onClick={(e) => { e.stopPropagation(); setSelectedPhone(displayClientPhone(r)) }} className="font-mono text-gold underline decoration-gold/30 underline-offset-2 hover:text-gold/80">{displayClientPhone(r)}</button> : '—' },
+    { key: 'sender_name', label: 'اسم المرسل', render: (r) => displayClientName(r.matchedSms?.sender_name, r.sender_name) || '—' },
     { key: 'payment_method', label: 'وسيلة الدفع', render: (r) => <PaymentMethodBadge value={r.payment_method} /> },
     { key: 'to_account_number', label: 'حساب الاستلام' },
     { key: 'status', label: 'الحالة', render: (r) => <Badge status={r.status} /> },
