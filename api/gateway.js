@@ -1,4 +1,8 @@
-const ALLOWED_PATHS = new Set(['health', 'merchants/overview', 'wallets/overview'])
+const ALLOWED_PATHS = new Set(['health', 'merchants/overview', 'wallets/overview', 'payouts'])
+
+function isAllowedPath(path) {
+  return ALLOWED_PATHS.has(path) || /^clients\/[^/]+(\/history)?$/.test(path) || /^payouts\/[^/]+\/(approve|reject|complete)$/.test(path)
+}
 
 function readBody(req) {
   return new Promise((resolve, reject) => { const chunks = []; req.on('data', (chunk) => chunks.push(chunk)); req.on('end', () => resolve(Buffer.concat(chunks))); req.on('error', reject) })
@@ -8,7 +12,7 @@ export default async function handler(req, res) {
   try {
     const url = new URL(req.url || '/', 'http://vercel.local')
     const path = String(url.searchParams.get('path') || '').replace(/^\/+|\/+$/g, '')
-    if (!ALLOWED_PATHS.has(path)) return res.status(400).json({ error: 'Unsupported gateway path' })
+    if (!isAllowedPath(path)) return res.status(400).json({ error: 'Unsupported gateway path' })
     const supabaseUrl = process.env.VITE_SUPABASE_URL
     const serviceKey = process.env.SUPABASE_SECRET_KEY
     if (!supabaseUrl || !serviceKey) return res.status(500).json({ error: 'Supabase server configuration is missing' })

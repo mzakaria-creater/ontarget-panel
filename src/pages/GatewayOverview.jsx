@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import Topbar from '../components/Topbar'
 import Modal from '../components/Modal'
 import { gatewayGet } from '../lib/gateway'
-import { supabase } from '../lib/supabase'
 import { formatNumber } from '../utils/format'
 
 const masters = ['NGPay', 'PayFuture']
@@ -11,7 +10,7 @@ const money = (value) => `${Number(value || 0).toLocaleString('en-EG', { maximum
 export default function GatewayOverview() {
   const [master, setMaster] = useState('NGPay'); const [tab, setTab] = useState('payin'); const [merchants, setMerchants] = useState([]); const [wallets, setWallets] = useState([]); const [clientPhone, setClientPhone] = useState(''); const [clientRows, setClientRows] = useState([]); const [selected, setSelected] = useState(null); const [loading, setLoading] = useState(false); const [error, setError] = useState('')
   async function load() { setLoading(true); setError(''); try { const [merchantData, walletData] = await Promise.all([gatewayGet('merchants/overview'), gatewayGet('wallets/overview')]); setMerchants(Array.isArray(merchantData) ? merchantData : merchantData.data || []); setWallets(Array.isArray(walletData) ? walletData : walletData.data || []) } catch (err) { setError(err.message) } finally { setLoading(false) } }
-  async function loadClient() { if (!clientPhone.trim()) return; const [summary, history] = await Promise.all([supabase.from('v_client_balance_summary').select('*').or(`phone.eq.${clientPhone.trim()},sender_number.eq.${clientPhone.trim()}`), supabase.from('v_payin_with_client_history').select('*').or(`phone.eq.${clientPhone.trim()},sender_number.eq.${clientPhone.trim()}`)]); if (summary.error && history.error) setError(summary.error.message); setClientRows([...(summary.data || []), ...(history.data || [])]) }
+  async function loadClient() { if (!clientPhone.trim()) return; setLoading(true); setError(''); try { const [profile, history] = await Promise.all([gatewayGet(`clients/${encodeURIComponent(clientPhone.trim())}`), gatewayGet(`clients/${encodeURIComponent(clientPhone.trim())}/history`)]); setClientRows([...(Array.isArray(profile) ? profile : profile.data || []), ...(Array.isArray(history) ? history : history.data || [])]) } catch (err) { setError(err.message); setClientRows([]) } finally { setLoading(false) } }
   useEffect(() => { load() }, [])
   const merchantRows = useMemo(() => merchants.filter((row) => !row.master_merchant || String(row.master_merchant).toLowerCase() === master.toLowerCase()), [merchants, master])
   const visibleRows = useMemo(() => merchantRows.filter((row) => !row.trx_type || String(row.trx_type).toLowerCase() === tab), [merchantRows, tab])

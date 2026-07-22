@@ -26,6 +26,7 @@ const NAV_GROUPS = [
       { to: '/health', label: 'صحة النظام', icon: '🩺' },
       { to: '/wallet-sms-report', label: 'تقرير SMS للمحافظ', icon: '📊' },
       { to: '/gateway', label: 'Gateway Overview', icon: '🔌' },
+      { to: '/payouts', label: 'Payout Transactions', icon: '💸', badgeKey: 'payout' },
     ],
   },
   {
@@ -60,6 +61,12 @@ export default function Sidebar() {
     intervalMs: 5000,
   })
   const smsCount = smsUpdates?.length || 0
+  const { data: payoutRequests } = useRealtimeTable({
+    key: ['sidebar-payout-requests'],
+    queryFn: async (sb) => sb.from('transactions').select('id').eq('trx_type', 'withdrawal').eq('status', 'pending').limit(99),
+    intervalMs: 10000,
+  })
+  const payoutCount = payoutRequests?.length || 0
 
   return (
     <aside className="group hidden h-full w-[76px] shrink-0 flex-col overflow-hidden border-l border-border bg-surface transition-[width] duration-300 ease-out hover:w-64 md:flex">
@@ -96,6 +103,7 @@ export default function Sidebar() {
                     </span>
                   )}
                   {item.to === '/smslive' && smsCount > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-white">{smsCount > 99 ? '99+' : smsCount}</span>}
+                  {item.badgeKey === 'payout' && payoutCount > 0 && <span className="rounded-full bg-danger px-2 py-0.5 text-xs font-bold text-white">{payoutCount > 99 ? '99+' : payoutCount}</span>}
                 </NavLink>
               ))}
             </div>

@@ -1,5 +1,5 @@
 const ALLOWED_RESOURCES = new Set([
-  'maven_transactions',
+  'maven_transactions', 'transactions',
   'browser_jobs',
   'api_risk_blacklist',
   'tx_complaints',

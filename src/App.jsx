@@ -23,6 +23,7 @@ const MavenWallets = lazy(() => import('./pages/MavenWallets'))
 const Health = lazy(() => import('./pages/Health'))
 const WalletSmsReport = lazy(() => import('./pages/WalletSmsReport'))
 const GatewayOverview = lazy(() => import('./pages/GatewayOverview'))
+const Payouts = lazy(() => import('./pages/Payouts'))
 import WalletFlow from './pages/WalletFlow'
 const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
 const WalletMonitor = lazy(() => import('./pages/WalletMonitor'))
@@ -53,6 +54,7 @@ export default function App() {
               <Route path="/health" element={withBoundary(Health)} />
               <Route path="/wallet-sms-report" element={withBoundary(WalletSmsReport)} />
               <Route path="/gateway" element={withBoundary(GatewayOverview)} />
+              <Route path="/payouts" element={withBoundary(Payouts)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />

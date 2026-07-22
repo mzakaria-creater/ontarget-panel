@@ -1,5 +1,5 @@
 const ALLOWED_RESOURCES = new Set([
-  'maven_transactions', 'browser_jobs', 'api_risk_blacklist', 'tx_complaints',
+  'maven_transactions', 'transactions', 'browser_jobs', 'api_risk_blacklist', 'tx_complaints',
   'maven_transaction_history', 'telegram_updates', 'telegram_alerts', 'telegram_config',
   'bot_sessions', 'panel_users', 'panel_permissions', 'roles', 'review_queue',
   'inbound_sms', 'wallet_accounts', 'wallet_device_map', 'wallet_registry',

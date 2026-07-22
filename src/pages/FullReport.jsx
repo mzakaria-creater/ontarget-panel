@@ -7,7 +7,9 @@ import Topbar from '../components/Topbar'
 import DataTable from '../components/DataTable'
 
 const COLORS = ['#d4af37', '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', '#1abc9c']
-const TABS = [['ov', '📊', 'نظرة عامة', 'Overview'], ['dy', '📅', 'يومي', 'Daily'], ['wl', '👛', 'المحافظ', 'Wallets'], ['mr', '🏢', 'التجار', 'Merchants'], ['sm', '📱', 'SMS وتدقيق', 'SMS audit'], ['og', '💸', 'الخارج', 'Outgoing'], ['tx', '🗄️', 'المعاملات', 'Transactions']]
+
+function PayoutReport({ data }) { const groups = {}; data.forEach((row) => { const key = `${row.master_merchant || 'Unknown'} · ${row.merchant || 'Unknown'}`; groups[key] ||= { key, master: row.master_merchant || 'Unknown', merchant: row.merchant || 'Unknown', count: 0, amount: 0, completed: 0, pending: 0, rejected: 0 }; const item = groups[key]; item.count += 1; item.amount += asNum(row.amount); if (row.status === 'completed') item.completed += 1; else if (row.status === 'rejected') item.rejected += 1; else item.pending += 1 }); const rows = Object.values(groups).sort((a, b) => b.amount - a.amount); return <><Kpis items={[['Payout requests', formatNumber(data.length), 'text-gold'], ['Payout volume', formatMoney(data.reduce((sum, row) => sum + asNum(row.amount), 0)), 'text-danger'], ['Completed', formatNumber(data.filter((row) => row.status === 'completed').length), 'text-success'], ['Awaiting action', formatNumber(data.filter((row) => ['pending', 'approved'].includes(row.status)).length), 'text-warning']]} /><Panel title="💸 Payouts by master merchant and sub-merchant"><TableWrap><table><thead><tr><th>Master merchant</th><th>Sub-merchant</th><th>Requests</th><th>Amount</th><th>Completed</th><th>Pending / approved</th><th>Rejected</th></tr></thead><tbody>{rows.map((row) => <tr key={row.key}><td>{row.master}</td><td className="font-bold text-gold">{row.merchant}</td><td>{formatNumber(row.count)}</td><td className="text-danger">{formatMoney(row.amount)}</td><td className="text-success">{row.completed}</td><td className="text-warning">{row.pending}</td><td className="text-danger">{row.rejected}</td></tr>)}</tbody></table>{!rows.length && <div className="p-10 text-center text-sm text-muted">No payout requests for the selected filters.</div>}</TableWrap></Panel></> }
+const TABS = [['ov', '📊', 'نظرة عامة', 'Overview'], ['dy', '📅', 'يومي', 'Daily'], ['wl', '👛', 'المحافظ', 'Wallets'], ['mr', '🏢', 'التجار', 'Merchants'], ['po', '💸', 'المدفوعات الخارجة', 'Payouts'], ['sm', '📱', 'SMS وتدقيق', 'SMS audit'], ['og', '💸', 'الخارج', 'Outgoing'], ['tx', '🗄️', 'المعاملات', 'Transactions']]
 
 const asNum = (value) => Number(value || 0)
 const pct = (a, b) => b ? Math.round((asNum(a) / asNum(b)) * 1000) / 10 : 0
@@ -20,7 +22,7 @@ export default function FullReport() {
   const { t } = useLanguage()
   const [tab, setTab] = useState('ov')
   const [filters, setFilters] = useState(defaultFilters)
-  const [data, setData] = useState({ daily: [], wallets: [], txs: [], recon: [], outgoing: [] })
+  const [data, setData] = useState({ daily: [], wallets: [], txs: [], payouts: [], recon: [], outgoing: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -30,12 +32,13 @@ export default function FullReport() {
       supabase.from('v_report_daily').select('*').order('d', { ascending: true }),
       supabase.from('v_report_wallets').select('*'),
       supabase.from('v_wallet_recent_transactions').select('*').order('tx_time', { ascending: false }).limit(5000),
+      supabase.from('transactions').select('*').eq('trx_type', 'withdrawal').order('created_at', { ascending: false }).limit(5000),
       supabase.from('v_wallet_sms_reconciliation').select('*'),
       supabase.from('v_report_outgoing').select('*').order('received_at', { ascending: false }).limit(500),
     ])
     const failed = queries.find((item) => item.error)
     if (failed) setError(failed.error.message)
-    setData({ daily: queries[0].data || [], wallets: queries[1].data || [], txs: queries[2].data || [], recon: queries[3].data || [], outgoing: queries[4].data || [] })
+    setData({ daily: queries[0].data || [], wallets: queries[1].data || [], txs: queries[2].data || [], payouts: queries[3].data || [], recon: queries[4].data || [], outgoing: queries[5].data || [] })
     setLoading(false)
   }
   useEffect(() => { load(); const timer = setInterval(load, 120000); return () => clearInterval(timer) }, [])
@@ -45,8 +48,9 @@ export default function FullReport() {
     const daily = data.daily.filter((row) => (!filters.from || row.d >= filters.from) && (!filters.to || row.d <= filters.to))
     const wallets = data.wallets.filter((row) => !filters.merchant || cleanMerchant(row.merchant) === filters.merchant)
     const txs = data.txs.filter((row) => { const date = rowDate(row); return (!filters.from || !date || date >= filters.from) && (!filters.to || !date || date <= filters.to) && (!filters.status || row.status === filters.status) && (!filters.merchant || cleanMerchant(row.merchant) === filters.merchant) })
+    const payouts = data.payouts.filter((row) => { const date = rowDate(row); return (!filters.from || !date || date >= filters.from) && (!filters.to || !date || date <= filters.to) && (!filters.status || row.status === filters.status) && (!filters.merchant || cleanMerchant(row.merchant) === filters.merchant) })
     const outgoing = data.outgoing.filter((row) => { const date = rowDate(row); return (!filters.from || !date || date >= filters.from) && (!filters.to || !date || date <= filters.to) })
-    return { daily, wallets, txs, outgoing }
+    return { daily, wallets, txs, payouts, outgoing }
   }, [data, filters])
   const stats = useMemo(() => {
     const paid = filtered.txs.filter((row) => row.status === 'PAID')
@@ -69,6 +73,7 @@ export default function FullReport() {
     {tab === 'dy' && <Daily data={filtered.daily} />}
     {tab === 'wl' && <Wallets data={filtered.wallets} recon={data.recon} />}
     {tab === 'mr' && <Merchants data={filtered.wallets} />}
+    {tab === 'po' && <PayoutReport data={filtered.payouts} />}
     {tab === 'sm' && <SmsAudit data={data.recon} />}
     {tab === 'og' && <Outgoing data={filtered.outgoing} />}
     {tab === 'tx' && <Transactions data={filtered.txs} loading={loading} error={error} />}

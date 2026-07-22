@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const appResources = new Set([
-  'maven_transactions',
+    'maven_transactions', 'transactions',
   'browser_jobs',
   'api_risk_blacklist',
   'tx_complaints',
