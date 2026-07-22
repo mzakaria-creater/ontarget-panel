@@ -8,6 +8,7 @@ const ALLOWED_RESOURCES = new Set([
   'v_wallet_recent_transactions', 'v_wallet_sms_reconciliation', 'v_wallet_outgoing_live',
   'v_outgoing_top_recipients', 'v_report_daily', 'v_report_wallets', 'v_report_outgoing',
   'v_automation_stats',
+  'v_client_balance_summary', 'v_payin_with_client_history',
 ])
 
 function readBody(req) {

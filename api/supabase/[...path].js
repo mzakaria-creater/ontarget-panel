@@ -30,6 +30,8 @@ const ALLOWED_RESOURCES = new Set([
   'v_report_wallets',
   'v_report_outgoing',
   'v_automation_stats',
+  'v_client_balance_summary',
+  'v_payin_with_client_history',
 ])
 
 function readBody(req) {

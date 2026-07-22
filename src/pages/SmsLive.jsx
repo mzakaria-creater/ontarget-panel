@@ -156,6 +156,12 @@ export default function SmsLive() {
     intervalMs: 0,
     enabled: !!selectedLinkedTxId,
   })
+  const candidateQuery = useRealtimeTable({
+    key: ['smslive-candidate-tx', selectedSms?.id, selectedSms?.amount],
+    queryFn: async (sb) => sb.from('maven_transactions').select('tx_id, amount, status, created_utc, sender_name, sender_number, to_account_number').eq('status', 'PENDING').eq('amount', selectedSms?.amount).order('created_utc', { ascending: false }).limit(20),
+    intervalMs: 0,
+    enabled: !!selectedSms && !selectedLinkedTxId && !!selectedSms.amount,
+  })
   const providers = useMemo(() => [...new Set((table.data || []).map((row) => row.provider).filter(Boolean))].sort(), [table.data])
   const devices = useMemo(() => [...new Set([...DEVICES, ...(table.data || []).map((row) => row.device_name).filter(Boolean)])].sort(), [table.data])
   const latestSms = smsRows[0] || null
@@ -399,6 +405,13 @@ export default function SmsLive() {
           const reportTone = tx?.status === 'PAID' ? 'success' : tx?.status === 'DECLINED' ? 'danger' : tx ? 'warning' : 'muted'
           const reportIcon = tx?.status === 'PAID' ? '✔' : tx?.status === 'DECLINED' ? '✕' : '…'
 
+          const smsTime = new Date(selectedSms.received_at || selectedSms.created_at || 0).getTime()
+          const recommendedCandidates = [...(candidateQuery.data || [])]
+            .map((c) => ({ ...c, diffMs: Math.abs(new Date(c.created_utc).getTime() - smsTime) }))
+            .sort((a, b) => a.diffMs - b.diffMs)
+          const recommendedTx = recommendedCandidates[0]
+          const recommendedIsSameWallet = !!recommendedTx?.sender_number && recommendedTx.sender_number === recommendedTx.to_account_number
+
           return <div className="space-y-4">
             <div className="rounded-xl border border-border bg-surface p-4">
               <div className="mb-3 text-xs font-bold uppercase tracking-wider text-muted">مسار المعاملة — من الاستلام حتى التقرير</div>
@@ -431,6 +444,15 @@ export default function SmsLive() {
             {!linkedId && <div className="rounded-xl border border-gold/30 bg-gold/5 p-4">
               <div className="mb-2 text-sm font-bold text-gold">DMD — ربط يدوي بالمعاملة</div>
               <div className="mb-3 text-xs text-muted">إذا لم يتم الربط التلقائي، أدخل رقم معاملة Maven لربط هذه الرسالة بها.</div>
+              {recommendedTx && (
+                <div className="mb-3 rounded-lg border border-success/40 bg-success/10 p-3">
+                  <div className="mb-1 text-xs font-bold text-success">🎯 معاملة مقترحة — نفس المبلغ والأقرب زمنياً</div>
+                  <div className="text-sm text-text">#{recommendedTx.tx_id} · {formatMoney(recommendedTx.amount)} · {formatAbsoluteDate(recommendedTx.created_utc)} · فرق {Math.round(recommendedTx.diffMs / 60000)} دقيقة{recommendedTx.sender_name || recommendedTx.sender_number ? ` · ${recommendedTx.sender_name || recommendedTx.sender_number}` : ''}</div>
+                  {recommendedIsSameWallet && <div className="mt-2 rounded-lg border border-danger/40 bg-danger/10 px-2 py-1 text-xs font-semibold text-danger">⚠ رقم المرسل في هذه المعاملة هو رقم محفظتنا — تحقق قبل الربط</div>}
+                  {recommendedCandidates.length > 1 && <div className="mt-1 text-xs text-muted">+{recommendedCandidates.length - 1} معاملة أخرى بنفس المبلغ</div>}
+                  <button onClick={() => setLinkTxId(String(recommendedTx.tx_id))} className="mt-2 rounded-lg bg-success px-3 py-1.5 text-xs font-bold text-white">استخدام هذا الرقم</button>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <input value={linkTxId} onChange={(e) => setLinkTxId(e.target.value.replace(/\D/g, ''))} inputMode="numeric" placeholder="رقم معاملة Maven" className="min-w-[220px] flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" />
                 <button onClick={manuallyLinkTransaction} disabled={linkingTx || !linkTxId} className="rounded-lg bg-gold px-3 py-2 text-sm font-bold text-bg disabled:opacity-50">{linkingTx ? 'جارٍ الربط...' : 'ربط بالمعاملة'}</button>

@@ -25,6 +25,8 @@ const appResources = new Set([
   'merchant_bank_registry',
   'automation_settings',
   'automation_audit_log',
+  'v_client_balance_summary',
+  'v_payin_with_client_history',
 ])
 
 function appPlugin(env) {

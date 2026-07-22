@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "gateway:poll": "node services/gateway-pollers/runner.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
