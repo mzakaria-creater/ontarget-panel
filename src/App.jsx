@@ -18,6 +18,8 @@ import TelegramBot from './pages/TelegramBot'
 import UsersAdmin from './pages/UsersAdmin'
 import Settlement from './pages/Settlement'
 const AutomationTV = lazy(() => import('./pages/AutomationTV'))
+const TvScreen = lazy(() => import('./pages/TvScreen'))
+const MavenWallets = lazy(() => import('./pages/MavenWallets'))
 import WalletFlow from './pages/WalletFlow'
 const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
 const WalletMonitor = lazy(() => import('./pages/WalletMonitor'))
@@ -42,8 +44,9 @@ export default function App() {
               <Route path="/transactions" element={<Navigate to="/monitor" replace />} />
               <Route path="/monitor" element={withBoundary(Monitor)} />
               <Route path="/tv" element={withBoundary(AutomationTV)} />
-              <Route path="/tvscreen" element={withBoundary(AutomationTV)} />
+              <Route path="/tvscreen" element={withBoundary(TvScreen)} />
               <Route path="/wallet-monitor" element={withBoundary(WalletMonitor)} />
+              <Route path="/mavenwallets" element={withBoundary(MavenWallets)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />
