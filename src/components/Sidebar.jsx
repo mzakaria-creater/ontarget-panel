@@ -27,6 +27,7 @@ const NAV_GROUPS = [
       { to: '/wallet-sms-report', label: 'تقرير SMS للمحافظ', icon: '📊' },
       { to: '/gateway', label: 'Gateway Overview', icon: '🔌' },
       { to: '/payouts', label: 'Payout Transactions', icon: '💸', badgeKey: 'payout' },
+      { to: '/hub', label: 'Treasury & Wallets', icon: '🏛️' },
     ],
   },
   {
