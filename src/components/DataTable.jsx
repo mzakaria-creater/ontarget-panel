@@ -34,7 +34,7 @@ export default function DataTable({
       const saved = JSON.parse(localStorage.getItem(storageKey) || 'null')
       setVisibleKeys(Array.isArray(saved) && saved.length ? saved : columns.map((column) => column.key))
     } catch { setVisibleKeys(columns.map((column) => column.key)) }
-  }, [columnStorageKey, storageKey, columns])
+  }, [columnStorageKey, storageKey])
   function toggleColumn(key) {
     const next = visibleKeys.includes(key) ? visibleKeys.filter((item) => item !== key) : [...visibleKeys, key]
     if (!next.length) return
