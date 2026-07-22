@@ -29,8 +29,15 @@ function UrgentTurboButton() {
   return <button onClick={active ? stopUrgent : runUrgent} disabled={busy} className={`rounded-xl border px-3 py-2 text-xs font-black ${active ? 'border-danger/50 bg-danger/10 text-danger' : 'border-gold/40 bg-gold/10 text-gold'} disabled:opacity-50`}>{active ? '⏹ إيقاف Turbo' : '🚀 Turbo عاجل · 3 دقائق'}{active && <span className="ml-1 text-[10px]">({Math.max(0, Math.ceil((until - Date.now()) / 60000))}د)</span>}</button>
 }
 
+function MobileTvDropdown() {
+  function go(event) {
+    if (event.target.value) window.location.assign(event.target.value)
+  }
+  return <select aria-label="تنقل سريع في TV" defaultValue="" onChange={go} className="w-full max-w-[220px] rounded-xl border border-border bg-surface px-3 py-2 text-xs font-bold text-text md:hidden"><option value="">☰ تنقل سريع في TV</option><option value="/tvscreen">📺 شاشة TV</option><option value="/wallet-monitor">📱 هواتف المحافظ</option><option value="/monitor">📊 المراقبة</option><option value="/smslive">📨 رسائل SMS</option><option value="/recovery-panel">⚡ الاسترجاع</option></select>
+}
+
 function Panel({ title, eyebrow, children, className = '' }) {
-  return <section className={`rounded-3xl border border-border bg-card/80 p-5 shadow-lg shadow-slate-950/5 ${className}`}><div className="mb-4 flex items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">{eyebrow}</div><h2 className="mt-1 text-lg font-extrabold text-text">{title}</h2></div>{title === 'Automation pipeline' ? <UrgentTurboButton /> : <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_14px_var(--color-success)]" />}</div>{children}</section>
+  return <section className={`rounded-3xl border border-border bg-card/80 p-5 shadow-lg shadow-slate-950/5 ${className}`}><div className="mb-4 flex items-end justify-between gap-3"><div><div className="text-[10px] font-black uppercase tracking-[0.22em] text-gold">{eyebrow}</div><h2 className="mt-1 text-lg font-extrabold text-text">{title}</h2></div>{title === 'Automation pipeline' ? <div className="flex items-center gap-2"><MobileTvDropdown /><UrgentTurboButton /></div> : <span className="h-2 w-2 rounded-full bg-success shadow-[0_0_14px_var(--color-success)]" />}</div>{children}</section>
 }
 
 function refsFromTx(tx) {

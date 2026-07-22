@@ -1,8 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
 import Sidebar from './components/Sidebar'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ToastProvider } from './components/Toast'
-import Monitor from './pages/Monitor'
+const Monitor = lazy(() => import('./pages/Monitor'))
 import SmsLive from './pages/SmsLive'
 import Recovery from './pages/Recovery'
 import Wallets from './pages/Wallets'
@@ -16,16 +17,16 @@ import Complaints from './pages/Complaints'
 import TelegramBot from './pages/TelegramBot'
 import UsersAdmin from './pages/UsersAdmin'
 import Settlement from './pages/Settlement'
-import AutomationTV from './pages/AutomationTV'
+const AutomationTV = lazy(() => import('./pages/AutomationTV'))
 import WalletFlow from './pages/WalletFlow'
-import RecoveryPanel from './pages/RecoveryPanel'
-import WalletMonitor from './pages/WalletMonitor'
+const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
+const WalletMonitor = lazy(() => import('./pages/WalletMonitor'))
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
 import { ThemeProvider } from './components/ThemeContext'
 
 function withBoundary(Page) {
-  return <ErrorBoundary><Page /></ErrorBoundary>
+  return <ErrorBoundary><Suspense fallback={<div className="flex h-full items-center justify-center bg-bg text-sm text-muted">جاري تحميل الصفحة...</div>}><Page /></Suspense></ErrorBoundary>
 }
 
 export default function App() {
