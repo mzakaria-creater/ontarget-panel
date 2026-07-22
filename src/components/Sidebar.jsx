@@ -31,6 +31,7 @@ const NAV_GROUPS = [
       { to: '/recovery-panel', label: 'استرجاع ومراقبة', icon: '🧭' },
       { to: '/complaints', label: 'مهام الشكاوى', icon: '🧩' },
       { to: '/blacklist', label: 'القائمة السوداء', icon: '🚫' },
+      { to: '/abuseflags', label: 'Abuse Flags', icon: '🚩' },
       { to: '/telegram', label: 'Telegram Bot', icon: '🤖' },
     ],
   },

@@ -10,6 +10,11 @@ const ALLOWED_RESOURCES = new Set([
   'v_automation_stats',
   'v_client_balance_summary', 'v_payin_with_client_history',
 ])
+const ALLOWED_RPCS = new Set([
+  'abuse_flags_list', 'scan_abuse_patterns', 'abuse_flag_promote_to_blacklist', 'abuse_flag_clear',
+  'blacklist_list', 'blacklist_add', 'blacklist_remove', 'location_blacklist_list',
+  'location_blacklist_add', 'location_blacklist_remove', 'suspicious_pattern_list',
+])
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -24,7 +29,8 @@ export default async function handler(req, res) {
   try {
     const requestUrl = new URL(req.url || '/', 'http://vercel.local')
     const resource = requestUrl.searchParams.get('resource')
-    if (!ALLOWED_RESOURCES.has(resource)) {
+    const isRpc = resource?.startsWith('rpc/')
+    if ((!isRpc && !ALLOWED_RESOURCES.has(resource)) || (isRpc && !ALLOWED_RPCS.has(resource.slice(4)))) {
       res.status(400).json({ error: 'Unsupported Supabase resource' })
       return
     }
