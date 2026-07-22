@@ -33,6 +33,7 @@ const PayoutTransactionsV2 = lazy(() => import('./pages/PayoutTransactionsV2'))
 import WalletFlow from './pages/WalletFlow'
 const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
 const AbuseFlags = lazy(() => import('./pages/AbuseFlags'))
+const Crm = lazy(() => import('./pages/Crm'))
 const WalletMonitor = lazy(() => import('./pages/WalletMonitor'))
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
@@ -70,6 +71,7 @@ export default function App() {
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/abuseflags" element={withBoundary(AbuseFlags)} />
+              <Route path="/crm" element={withBoundary(Crm)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />
               <Route path="/telegram" element={withBoundary(TelegramBot)} />
               <Route path="/users" element={withBoundary(UsersAdmin)} />

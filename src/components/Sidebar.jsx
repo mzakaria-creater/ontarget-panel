@@ -32,6 +32,7 @@ const NAV_GROUPS = [
       { to: '/complaints', label: 'مهام الشكاوى', icon: '🧩' },
       { to: '/blacklist', label: 'القائمة السوداء', icon: '🚫' },
       { to: '/abuseflags', label: 'Abuse Flags', icon: '🚩' },
+      { to: '/crm', label: 'Client CRM', icon: '👥' },
       { to: '/telegram', label: 'Telegram Bot', icon: '🤖' },
     ],
   },
