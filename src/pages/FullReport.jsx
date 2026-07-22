@@ -33,7 +33,7 @@ export default function FullReport() {
       supabase.from('v_report_daily').select('*').order('d', { ascending: true }),
       supabase.from('v_report_wallets').select('*'),
       supabase.from('v_wallet_recent_transactions').select('*').order('tx_time', { ascending: false }).limit(5000),
-      supabase.from('transactions').select('*').eq('trx_type', 'withdrawal').order('created_at', { ascending: false }).limit(5000),
+      supabase.from('transactions').select('*').order('created_at', { ascending: false }).limit(5000),
       supabase.from('v_wallet_sms_reconciliation').select('*'),
       supabase.from('v_report_outgoing').select('*').order('received_at', { ascending: false }).limit(500),
     ])

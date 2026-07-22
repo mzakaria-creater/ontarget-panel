@@ -7,7 +7,7 @@ const dateOf = (row) => String(row.created_at || row.created_utc || row.paid_at 
 
 export default function PayoutTransactions() {
   const [from, setFrom] = useState(''); const [to, setTo] = useState(''); const [merchant, setMerchant] = useState(''); const [status, setStatus] = useState(''); const [paymentType, setPaymentType] = useState(''); const [search, setSearch] = useState(''); const [amount, setAmount] = useState('')
-  const query = useRealtimeTable({ key: ['payout-list'], queryFn: async (sb) => sb.from('transactions').select('*').eq('trx_type', 'withdrawal').order('created_at', { ascending: false }).limit(10000), intervalMs: 15000 })
+  const query = useRealtimeTable({ key: ['payout-list'], queryFn: async (sb) => sb.from('transactions').select('*').order('created_at', { ascending: false }).limit(10000), intervalMs: 15000 })
   const allRows = query.data || []
   const merchants = [...new Set(allRows.map((row) => row.merchant || row.merchant_name).filter(Boolean))].sort()
   const paymentTypes = [...new Set(allRows.map((row) => row.payment_method || row.payment_type).filter(Boolean))].sort()

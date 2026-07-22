@@ -87,7 +87,7 @@ export default function Sidebar() {
   const smsCount = smsUpdates?.length || 0
   const { data: payoutRequests } = useRealtimeTable({
     key: ['sidebar-payout-requests'],
-    queryFn: async (sb) => sb.from('transactions').select('id').eq('trx_type', 'withdrawal').eq('status', 'pending').limit(99),
+    queryFn: async (sb) => sb.from('transactions').select('id').eq('status', 'pending').limit(99),
     intervalMs: 10000,
   })
   const payoutCount = payoutRequests?.length || 0

@@ -12,7 +12,7 @@ export default function PayoutTransactionsV2() {
   const [filters, setFilters] = useState({ from: '', to: '', merchant: '', status: '', payment: '', amount: '', search: '' })
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
-  const query = useRealtimeTable({ key: ['payout-list-v2'], queryFn: async (sb) => sb.from('transactions').select('*').eq('trx_type', 'withdrawal').order('created_at', { ascending: false }).limit(10000), intervalMs: 15000 })
+  const query = useRealtimeTable({ key: ['payout-list-v2'], queryFn: async (sb) => sb.from('transactions').select('*').order('created_at', { ascending: false }).limit(10000), intervalMs: 15000 })
   const all = query.data || []
   const merchants = [...new Set(all.map((row) => row.merchant || row.merchant_name).filter(Boolean))].sort()
   const payments = [...new Set(all.map((row) => row.payment_method || row.payment_type).filter(Boolean))].sort()

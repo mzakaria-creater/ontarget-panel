@@ -8,7 +8,7 @@ const statusTone = (status) => status === 'pending' ? 'text-warning bg-warning/1
 
 export default function ApprovalQueue() {
   const [mode, setMode] = useState('pending'); const [selected, setSelected] = useState(new Set()); const [search, setSearch] = useState(''); const [busy, setBusy] = useState(false); const [message, setMessage] = useState('')
-  const table = useRealtimeTable({ key: ['approval-queue', mode], queryFn: async (sb) => sb.from('transactions').select('*').eq('trx_type', 'withdrawal').in('status', mode === 'pending' ? ['pending'] : ['approved', 'completed', 'rejected']).order('created_at', { ascending: false }).limit(500), intervalMs: 10000 })
+  const table = useRealtimeTable({ key: ['approval-queue', mode], queryFn: async (sb) => sb.from('transactions').select('*').in('status', mode === 'pending' ? ['pending'] : ['approved', 'completed', 'rejected']).order('created_at', { ascending: false }).limit(500), intervalMs: 10000 })
   const rows = useMemo(() => (table.data || []).filter((row) => !search || [row.trx_id, row.merchant, row.client_phone, row.amount, row.wallet_number].some((value) => String(value || '').toLowerCase().includes(search.toLowerCase()))), [table.data, search])
   const pending = rows.filter((row) => row.status === 'pending'); const approved = rows.filter((row) => row.status === 'approved')
   const toggle = (id) => setSelected((current) => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next })
