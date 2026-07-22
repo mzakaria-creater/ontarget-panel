@@ -12,11 +12,14 @@ const TABS = [['ov', '📊', 'نظرة عامة', 'Overview'], ['dy', '📅', '�
 const asNum = (value) => Number(value || 0)
 const pct = (a, b) => b ? Math.round((asNum(a) / asNum(b)) * 1000) / 10 : 0
 const shortWallet = (value) => value && value.length > 14 ? `${value.slice(0, 5)}…${value.slice(-4)}` : value || '—'
+const cairoDate = (date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
+const defaultFilters = () => ({ from: `${cairoDate().slice(0, 8)}01`, to: cairoDate(), merchant: '', status: '' })
+const rowDate = (row) => String(row.tx_time || row.created_utc || row.updated_at || row.received_at || '').slice(0, 10)
 
 export default function FullReport() {
   const { t } = useLanguage()
   const [tab, setTab] = useState('ov')
-  const [filters, setFilters] = useState({ from: '2026-07-01', to: '2026-07-21', merchant: '', status: '' })
+  const [filters, setFilters] = useState(defaultFilters)
   const [data, setData] = useState({ daily: [], wallets: [], txs: [], recon: [], outgoing: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -41,8 +44,9 @@ export default function FullReport() {
   const filtered = useMemo(() => {
     const daily = data.daily.filter((row) => (!filters.from || row.d >= filters.from) && (!filters.to || row.d <= filters.to))
     const wallets = data.wallets.filter((row) => !filters.merchant || cleanMerchant(row.merchant) === filters.merchant)
-    const txs = data.txs.filter((row) => { const date = String(row.tx_time || '').slice(0, 10); return (!filters.from || date >= filters.from) && (!filters.to || date <= filters.to) && (!filters.status || row.status === filters.status) && (!filters.merchant || cleanMerchant(row.merchant) === filters.merchant) })
-    return { daily, wallets, txs }
+    const txs = data.txs.filter((row) => { const date = rowDate(row); return (!filters.from || !date || date >= filters.from) && (!filters.to || !date || date <= filters.to) && (!filters.status || row.status === filters.status) && (!filters.merchant || cleanMerchant(row.merchant) === filters.merchant) })
+    const outgoing = data.outgoing.filter((row) => { const date = rowDate(row); return (!filters.from || !date || date >= filters.from) && (!filters.to || !date || date <= filters.to) })
+    return { daily, wallets, txs, outgoing }
   }, [data, filters])
   const stats = useMemo(() => {
     const paid = filtered.txs.filter((row) => row.status === 'PAID')
@@ -54,7 +58,7 @@ export default function FullReport() {
     return { paid: paid.length || filtered.daily.reduce((sum, row) => sum + asNum(row.paid_tx), 0), declined: declined.length || filtered.daily.reduce((sum, row) => sum + asNum(row.dec_tx), 0), expired: expired.length || filtered.daily.reduce((sum, row) => sum + asNum(row.exp_tx), 0), volume, success: pct(paid.length, filtered.txs.length), smsRate: pct(smsWallets, filtered.wallets.length) }
   }, [filtered, data.recon])
 
-  function reset() { setFilters({ from: '2026-07-01', to: '2026-07-21', merchant: '', status: '' }) }
+  function reset() { setFilters(defaultFilters()) }
   function quick(type) { if (type === 'jul') setFilters((f) => ({ ...f, from: '2026-07-01', to: '2026-07-21' })); else if (type === 'all') setFilters((f) => ({ ...f, from: '', to: '' })); else { const today = new Date(); const from = new Date(); from.setDate(today.getDate() - 7); setFilters((f) => ({ ...f, from: from.toISOString().slice(0, 10), to: today.toISOString().slice(0, 10) })) } }
 
   return <div className="flex h-full min-h-0 flex-col bg-bg"><Topbar title={t('OnTarget — تقرير شامل', 'OnTarget — Full report')} subtitle={t('NagoPay × Maven × محافظ × SMS · حي', 'NagoPay × Maven × wallets × SMS · Live')} onRefresh={load} isFetching={loading} /><div className="flex-1 overflow-y-auto bg-bg p-4 md:p-6">
@@ -66,7 +70,7 @@ export default function FullReport() {
     {tab === 'wl' && <Wallets data={filtered.wallets} recon={data.recon} />}
     {tab === 'mr' && <Merchants data={filtered.wallets} />}
     {tab === 'sm' && <SmsAudit data={data.recon} />}
-    {tab === 'og' && <Outgoing data={data.outgoing} />}
+    {tab === 'og' && <Outgoing data={filtered.outgoing} />}
     {tab === 'tx' && <Transactions data={filtered.txs} loading={loading} error={error} />}
   </div></div>
 }
@@ -88,12 +92,12 @@ function SmsAudit({ data }) { const totals = data.reduce((a, row) => ({ paid: a.
 
 function Outgoing({ data }) { const total = data.reduce((s, row) => s + asNum(row.amount), 0); return <><Kpis items={[["إجمالي الخارج (EGP)", formatMoney(total), 'text-danger'], ['عدد السحوبات', formatNumber(data.length), 'text-gold'], ['مستلم معروف', formatNumber(data.filter((row) => row.recipient).length), 'text-blue-500']]} /><Panel title="📋 سجل السحوبات"><TableWrap><table><thead><tr><th>الوقت</th><th>المبلغ</th><th>المستلم</th><th>الجهاز</th><th>الرصيد بعدها</th></tr></thead><tbody>{data.map((row, i) => <tr key={row.id || `${row.received_at}-${i}`}><td>{formatAbsoluteDate(row.received_at)}</td><td className="text-danger">{formatMoney(row.amount)}</td><td>{row.recipient || '—'}</td><td>{row.webhook_name || '—'}</td><td>{formatMoney(row.balance_after)}</td></tr>)}</tbody></table></TableWrap></Panel></> }
 
-function Transactions({ data, loading, error }) { const columns = [{ key: 'tx_id', label: 'TX ID', render: (row) => <span className="font-mono text-gold">{row.tx_id}</span> }, { key: 'wallet', label: 'المحفظة', render: (row) => <span className="font-mono text-xs">{shortWallet(row.wallet)}</span> }, { key: 'amount', label: 'المبلغ', render: (row) => formatMoney(row.amount) }, { key: 'status', label: 'الحالة', render: (row) => <span className={`rounded-full px-2 py-1 text-xs font-bold ${row.status === 'PAID' ? 'bg-success/15 text-success' : row.status === 'DECLINED' ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'}`}>{row.status}</span> }, { key: 'tx_time', label: 'التوقيت', render: (row) => formatAbsoluteDate(row.tx_time) }]; return <Panel title="🗄️ سجل المعاملات"><DataTable columns={columns} data={data} loading={loading} error={error ? new Error(error) : null} getRowKey={(row) => row.tx_id} emptyEmoji="🧾" emptyTitle="لا توجد معاملات" emptySubtitle="غيّر الفلاتر أو حدّث البيانات" /></Panel> }
+function Transactions({ data, loading, error }) { const columns = [{ key: 'tx_id', label: 'TX ID', render: (row) => <span className="font-mono text-gold">{row.tx_id}</span> }, { key: 'wallet', label: 'المحفظة', render: (row) => <span className="font-mono text-xs">{shortWallet(row.wallet || row.wallet_number || row.to_account_number)}</span> }, { key: 'amount', label: 'المبلغ', render: (row) => formatMoney(row.amount) }, { key: 'status', label: 'الحالة', render: (row) => <span className={`rounded-full px-2 py-1 text-xs font-bold ${row.status === 'PAID' ? 'bg-success/15 text-success' : row.status === 'DECLINED' ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'}`}>{row.status || 'PENDING'}</span> }, { key: 'tx_time', label: 'التوقيت', render: (row) => formatAbsoluteDate(row.tx_time || row.created_utc || row.updated_at || row.received_at) }]; return <Panel title="🗄️ سجل المعاملات"><DataTable columns={columns} data={data} loading={loading} error={error ? new Error(error) : null} getRowKey={(row) => row.tx_id} emptyEmoji="🧾" emptyTitle="لا توجد معاملات" emptySubtitle="غيّر الفلاتر أو حدّث البيانات" /></Panel> }
 
 function Kpis({ items }) { return <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">{items.map(([label, value, tone]) => <div key={label} className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">{label}</div><div className={`mt-2 text-xl font-black ${tone}`}>{value}</div></div>)}</div> }
 function Panel({ title, children }) { return <section className="mb-5 rounded-2xl border border-border bg-card p-4 md:p-5"><h2 className="mb-4 font-bold text-gold">{title}</h2>{children}</section> }
 function ChartBox({ children, tall = false }) { return <div className={tall ? 'h-[350px]' : 'h-[280px]'}><ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer></div> }
-function TableWrap({ children }) { return <div className="max-w-full overflow-x-auto rounded-xl border border-border">{children}</div> }
+function TableWrap({ children }) { return <div className="max-w-full overflow-x-auto rounded-xl border border-border [&_table]:min-w-[720px] [&_table]:w-full [&_td]:whitespace-nowrap [&_th]:whitespace-nowrap">{children}</div> }
 function Line({ label, value }) { return <div className="flex justify-between gap-3 border-b border-border py-2 text-xs last:border-0"><span className="text-muted">{label}</span><b className="font-mono text-text">{value}</b></div> }
 function cleanMerchant(value) { return String(value || 'غير محدد').replace(/\[REPLACED.*?\]/, '').trim() }
 function monthSummary(rows) { const map = {}; rows.forEach((row) => { const month = String(row.d || '').slice(0, 7); map[month] ||= { name: month, value: 0, count: 0 }; map[month].value += asNum(row.paid_amt); map[month].count += asNum(row.paid_tx) }); return Object.values(map) }
