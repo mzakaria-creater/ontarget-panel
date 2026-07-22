@@ -17,7 +17,10 @@ export async function pollProvider({ provider, config, apiKey, masterMerchant, m
   const base = config[`${prefix}_BASE_URL`] || (provider === 'maven' ? config.MAVEN_COLLECTOR_BASE : config.IGATEWAY_BASE_URL)
   const loginUrl = resolveUrl(config[`${prefix}_LOGIN_URL`] || (base ? `${base.replace(/\/$/, '')}/login` : undefined), base)
   await login(session, loginUrl, config[`${prefix}_USERNAME`] || config[`${prefix}_COLLECTOR_USERNAME`], config[`${prefix}_PASSWORD`] || config[`${prefix}_COLLECTOR_PASSWORD`])
-  const endpoints = provider === 'maven' ? { payin: config.MAVEN_PAYIN_LIST_ENDPOINT || config.MAVEN_TRANSACTION_LIST_ENDPOINT, payout: config.MAVEN_P2P_PAYOUT_LIST_ENDPOINT } : { payin: config.IGATEWAY_PAYIN_TRANSACTION_URL, payout: config.IGATEWAY_PAYOUT_TRANSACTION_EGY_URL }
+  const endpoints = provider === 'maven' ? {
+    payin: config.MAVEN_PAYIN_LIST_ENDPOINT || config.MAVEN_TRANSACTION_LIST_ENDPOINT,
+    payout: config.MAVEN_P2P_PAYOUT_LIST_ENDPOINT || 'https://bo.maven-consulting.co/Supplier/Transactions/GetP2PPayoutTransactionList',
+  } : { payin: config.IGATEWAY_PAYIN_TRANSACTION_URL, payout: config.IGATEWAY_PAYOUT_TRANSACTION_EGY_URL }
   let ingested = 0
   for (const [trxType, endpoint] of Object.entries(endpoints)) { for (const row of await fetchList(session, endpoint, base)) { const transaction = normalizeTransaction(row, { provider, trxType, masterMerchant, merchant }); if (!transaction.external_id) continue; await ingest(transaction, apiKey); ingested += 1 } }
   return { provider, ingested }

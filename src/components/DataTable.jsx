@@ -19,12 +19,31 @@ export default function DataTable({
   onToggleRow,
   onToggleAll,
   paginated = true,
+  columnStorageKey,
 }) {
   const [pageSize, setPageSize] = useState(50)
   const [page, setPage] = useState(1)
+  const [role] = useState(() => localStorage.getItem('ontarget-role') || 'operator')
+  const [visibleKeys, setVisibleKeys] = useState(() => columns.map((column) => column.key))
+  const [columnsOpen, setColumnsOpen] = useState(false)
+  const storageKey = columnStorageKey ? `ontarget-columns:${columnStorageKey}:${role}` : ''
+  const activeColumns = columnStorageKey ? columns.filter((column) => visibleKeys.includes(column.key)) : columns
+  useEffect(() => {
+    if (!columnStorageKey) return
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || 'null')
+      setVisibleKeys(Array.isArray(saved) && saved.length ? saved : columns.map((column) => column.key))
+    } catch { setVisibleKeys(columns.map((column) => column.key)) }
+  }, [columnStorageKey, storageKey, columns])
+  function toggleColumn(key) {
+    const next = visibleKeys.includes(key) ? visibleKeys.filter((item) => item !== key) : [...visibleKeys, key]
+    if (!next.length) return
+    setVisibleKeys(next)
+    localStorage.setItem(storageKey, JSON.stringify(next))
+  }
   useEffect(() => setPage(1), [data])
 
-  if (loading) return <TableSkeleton columns={columns.length + (selectable ? 1 : 0)} />
+  if (loading) return <TableSkeleton columns={activeColumns.length + (selectable ? 1 : 0)} />
 
   if (error) {
     return (
@@ -44,6 +63,13 @@ export default function DataTable({
 
   return (
     <div className="max-w-full rounded-xl border border-border bg-card">
+      {columnStorageKey && <div className="flex items-center justify-end gap-2 border-b border-border bg-surface px-3 py-2 text-xs">
+        <span className="text-muted">Columns · role: <b className="text-gold">{role}</b></span>
+        <button type="button" onClick={() => setColumnsOpen((open) => !open)} className="rounded-lg border border-border px-2 py-1 text-muted hover:border-gold hover:text-gold">⚙ Select columns</button>
+        {columnsOpen && <div className="absolute z-30 mt-28 rounded-xl border border-border bg-card p-3 shadow-2xl">
+          {columns.map((column) => <label key={column.key} className="flex items-center gap-2 px-2 py-1.5 text-text"><input type="checkbox" checked={visibleKeys.includes(column.key)} onChange={() => toggleColumn(column.key)} className="accent-gold" />{column.label}</label>)}
+        </div>}
+      </div>}
       <div className="macbook-data-desktop hidden overflow-x-auto md:block">
       <table className="w-full min-w-max text-sm">
         <thead>
@@ -58,7 +84,7 @@ export default function DataTable({
                 />
               </th>
             )}
-            {columns.map((col) => (
+            {activeColumns.map((col) => (
               <th key={col.key} className="whitespace-nowrap px-3 py-3 font-bold lg:px-4">
                 {col.label}
               </th>
@@ -84,7 +110,7 @@ export default function DataTable({
                     />
                   </td>
                 )}
-                {columns.map((col) => (
+                {activeColumns.map((col) => (
                   <td key={col.key} className="max-w-[280px] px-3 py-3 text-text lg:px-4">
                     {col.render ? col.render(row) : row[col.key]}
                   </td>
@@ -99,9 +125,9 @@ export default function DataTable({
       <div className="macbook-data-mobile space-y-3 p-3 md:hidden">
         {visibleData.map((row, i) => {
           const key = getRowKey(row, i)
-          const primary = columns[0]
-          const secondary = columns[1]
-          const remaining = columns.slice(2)
+          const primary = activeColumns[0]
+          const secondary = activeColumns[1]
+          const remaining = activeColumns.slice(2)
           return (
             <div key={key} onClick={() => onRowClick?.(row)} className={`rounded-2xl border border-border bg-surface p-4 shadow-sm ${onRowClick ? 'cursor-pointer active:scale-[0.99]' : ''} ${rowClassName?.(row) || ''}`}>
               <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
