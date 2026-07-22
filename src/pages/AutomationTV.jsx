@@ -52,9 +52,9 @@ function refsFromSms(sms) {
 
 export default function AutomationTV() {
   const [now, setNow] = useState(new Date())
-  const transactions = useRealtimeTable({ key: ['automation-tv-transactions'], queryFn: async (sb) => sb.from('maven_transactions').select('tx_id, amount, status, sender_name, sender_number, payment_method, created_utc, updated_at, raw, maven_raw_row').order('updated_at', { ascending: false }).limit(80), intervalMs: 10000 })
-  const sms = useRealtimeTable({ key: ['automation-tv-sms'], queryFn: async (sb) => sb.from('inbound_sms').select('id, amount, sms_category, sender_name, sender_number, receiver_number, confirmed_wallet_number, wallet_name, wallet, device_name, received_at, matched, match_status, consumed_by_tx_id, matched_transaction_id, maven_transaction_id, trx_id, trx_reference, balance_after, message, raw_sms').order('received_at', { ascending: false }).limit(80), intervalMs: 10000 })
-  const jobs = useRealtimeTable({ key: ['automation-tv-jobs'], queryFn: async (sb) => sb.from('browser_jobs').select('id, tx_id, target_status, state, source, created_at, updated_at, completed_at').order('updated_at', { ascending: false }).limit(80), intervalMs: 10000 })
+  const transactions = useRealtimeTable({ key: ['automation-tv-transactions'], queryFn: async (sb) => sb.from('maven_transactions').select('tx_id, amount, status, sender_name, sender_number, payment_method, created_utc, updated_at, raw, maven_raw_row').order('updated_at', { ascending: false }).limit(80), intervalMs: 4000 })
+  const sms = useRealtimeTable({ key: ['automation-tv-sms'], queryFn: async (sb) => sb.from('inbound_sms').select('id, amount, sms_category, sender_name, sender_number, receiver_number, confirmed_wallet_number, wallet_name, wallet, device_name, received_at, matched, match_status, consumed_by_tx_id, matched_transaction_id, maven_transaction_id, trx_id, trx_reference, balance_after, message, raw_sms').order('received_at', { ascending: false }).limit(80), intervalMs: 4000 })
+  const jobs = useRealtimeTable({ key: ['automation-tv-jobs'], queryFn: async (sb) => sb.from('browser_jobs').select('id, tx_id, target_status, state, source, created_at, updated_at, completed_at').order('updated_at', { ascending: false }).limit(80), intervalMs: 4000 })
 
   useEffect(() => { const timer = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(timer) }, [])
 
