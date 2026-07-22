@@ -24,6 +24,7 @@ const NAV_GROUPS = [
       { to: '/wallet-monitor', label: 'مراقبة المحافظ', icon: '📱' },
       { to: '/mavenwallets', label: 'محافظ Maven', icon: '🏦' },
       { to: '/health', label: 'صحة النظام', icon: '🩺' },
+      { to: '/wallet-sms-report', label: 'تقرير SMS للمحافظ', icon: '📊' },
     ],
   },
   {
