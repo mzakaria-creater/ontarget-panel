@@ -8,6 +8,7 @@ import Topbar from '../components/Topbar'
 import DataTable from '../components/DataTable'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
+import { dedupeSms } from '../utils/smsDedupe'
 
 const PAGE_KEY = 'smslive'
 const DEFAULT_FILTERS = { device_name: '', sms_category: '', provider: '', search: '', date_from: '', date_to: '' }
@@ -162,7 +163,7 @@ export default function SmsLive() {
 
   const smsRows = useMemo(() => {
     const term = filters.search.trim().toLowerCase()
-    const sorted = [...(table.data || [])]
+    const sorted = dedupeSms(table.data || [])
       .filter((row) => !term || [row.message, row.raw_sms, row.sender, row.sender_number, row.receiver_number, row.trx_id, row.trx_reference, row.maven_transaction_id, row.consumed_by_tx_id, row.device_name].some((value) => String(value ?? '').toLowerCase().includes(term)))
       .sort((a, b) => new Date(b.received_at || b.created_at || 0).getTime() - new Date(a.received_at || a.created_at || 0).getTime())
     const firstDepositByCustomer = new Set()
