@@ -66,6 +66,7 @@ export default function App() {
               <Route path="/maven-payouts" element={withBoundary(MavenPayouts)} />
               <Route path="/withdrawal-sms" element={withBoundary(WithdrawalSmsQueue)} />
               <Route path="/transactions-raw" element={withBoundary(AllTransactionsRaw)} />
+              <Route path="/alldata" element={withBoundary(AllTransactionsRaw)} />
               <Route path="/health" element={withBoundary(HealthV2)} />
               <Route path="/wallet-sms-report" element={withBoundary(WalletSmsReport)} />
               <Route path="/gateway" element={withBoundary(GatewayOverview)} />
