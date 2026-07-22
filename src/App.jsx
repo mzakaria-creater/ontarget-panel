@@ -21,6 +21,7 @@ const AutomationTV = lazy(() => import('./pages/AutomationTV'))
 const TvScreen = lazy(() => import('./pages/TvScreen'))
 const MavenWallets = lazy(() => import('./pages/MavenWallets'))
 const Health = lazy(() => import('./pages/Health'))
+const HealthV2 = lazy(() => import('./pages/HealthV2'))
 const WalletSmsReport = lazy(() => import('./pages/WalletSmsReport'))
 const GatewayOverview = lazy(() => import('./pages/GatewayOverview'))
 const Payouts = lazy(() => import('./pages/Payouts'))
@@ -55,7 +56,7 @@ export default function App() {
               <Route path="/tvscreen" element={withBoundary(TvScreen)} />
               <Route path="/wallet-monitor" element={withBoundary(WalletMonitor)} />
               <Route path="/mavenwallets" element={withBoundary(MavenWallets)} />
-              <Route path="/health" element={withBoundary(Health)} />
+              <Route path="/health" element={withBoundary(HealthV2)} />
               <Route path="/wallet-sms-report" element={withBoundary(WalletSmsReport)} />
               <Route path="/gateway" element={withBoundary(GatewayOverview)} />
               <Route path="/payouts" element={withBoundary(Payouts)} />
