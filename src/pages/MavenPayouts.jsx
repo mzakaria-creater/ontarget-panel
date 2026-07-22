@@ -56,7 +56,7 @@ export default function MavenPayouts() {
     { key: 'tx_id', label: 'TRX ID', render: (row) => <span className="font-mono font-bold text-gold">{row.tx_id}</span> },
     { key: 'status', label: 'Status', render: (row) => <Badge status={row.status} /> },
     { key: 'amount', label: 'Amount', render: (row) => <b>{formatMoney(row.amount)}</b> },
-    { key: 'sender', label: 'Client / Account', render: (row) => <span>{row.sender_name || row.sender_number || row.to_account_number || '—'}</span> },
+    { key: 'sender', label: 'Client / Sender phone', render: (row) => <span>{row.sender_name || row.sender_number || '—'}</span> },
     { key: 'payment_method', label: 'Payment', render: (row) => row.payment_method || row.payout_type || 'Maven Payout' },
     { key: 'merchant', label: 'Merchant', render: (row) => row.master_merchant ? `${row.master_merchant} · ${row.merchant || ''}` : row.merchant || '—' },
     { key: 'raw', label: 'Raw', render: (row) => <span className={Object.keys(rawOf(row)).length ? 'text-success' : 'text-muted'}>{Object.keys(rawOf(row)).length ? 'Available' : 'Empty'}</span> },
