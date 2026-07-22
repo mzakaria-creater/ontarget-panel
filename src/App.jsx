@@ -40,6 +40,7 @@ export default function App() {
               <Route path="/transactions" element={<Navigate to="/monitor" replace />} />
               <Route path="/monitor" element={withBoundary(Monitor)} />
               <Route path="/tv" element={withBoundary(AutomationTV)} />
+              <Route path="/tvscreen" element={withBoundary(AutomationTV)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />
