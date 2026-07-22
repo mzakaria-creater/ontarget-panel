@@ -21,6 +21,7 @@ const NAV_GROUPS = [
     items: [
       { to: '/recovery', label: 'استرجاع', icon: '⚡', badgeKey: 'recovery' },
       { to: '/recovery-panel', label: 'استرجاع ومراقبة', icon: '🧭' },
+      { to: '/wallet-monitor', label: 'مراقبة المحافظ', icon: '📱' },
     ],
   },
   {

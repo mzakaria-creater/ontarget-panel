@@ -19,6 +19,7 @@ import Settlement from './pages/Settlement'
 import AutomationTV from './pages/AutomationTV'
 import WalletFlow from './pages/WalletFlow'
 import RecoveryPanel from './pages/RecoveryPanel'
+import WalletMonitor from './pages/WalletMonitor'
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
 import { ThemeProvider } from './components/ThemeContext'
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="/monitor" element={withBoundary(Monitor)} />
               <Route path="/tv" element={withBoundary(AutomationTV)} />
               <Route path="/tvscreen" element={withBoundary(AutomationTV)} />
+              <Route path="/wallet-monitor" element={withBoundary(WalletMonitor)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />
