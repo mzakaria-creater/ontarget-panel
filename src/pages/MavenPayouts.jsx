@@ -27,8 +27,7 @@ export default function MavenPayouts() {
     const text = [row.tx_id, row.status, row.amount, row.sender_name, row.sender_number, row.to_account_number, row.payment_method, row.merchant, row.master_merchant, row.sub_merchant, row.external_id].join(' ').toLowerCase()
     return (!status || String(row.status || '').toLowerCase() === status.toLowerCase()) && (!term || text.includes(term))
   }), [all, search, status])
-  const walletOptions = useMemo(() => [...new Set(all.flatMap((row) => [row.to_account_number, row.wallet_number, row.wallet].filter(Boolean).map(String)))].sort(), [all])
-  const openRaw = (row) => { const current = String(row.to_account_number || row.wallet_number || row.wallet || ''); const selectedWallet = window.prompt(`Wallet number correction. Choose/type one:\n${walletOptions.join('\n')}`, current); setEditing(row); setWalletNumber(selectedWallet === null ? current : selectedWallet.trim()); setRawText(JSON.stringify(rawOf(row), null, 2)) }
+  const openRaw = (row) => { setEditing(row); setWalletNumber(String(row.to_account_number || row.wallet_number || row.wallet || '')); setRawText(JSON.stringify(rawOf(row), null, 2)) }
   const toggle = (key) => setSelected((current) => { const next = new Set(current); next.has(key) ? next.delete(key) : next.add(key); return next })
   const toggleAll = (checked) => setSelected((current) => {
     if (checked) return new Set([...current, ...rows.map((row) => String(row.tx_id))])
