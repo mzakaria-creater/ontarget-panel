@@ -14,7 +14,7 @@ async function fetchList(session, url, base) { const target = resolveUrl(url, ba
 
 export async function pollProvider({ provider, config, apiKey, masterMerchant, merchant }) {
   const session = new HttpSession(); const prefix = provider === 'maven' ? 'MAVEN' : 'IGATEWAY'
-  const base = config[`${prefix}_BASE_URL`]
+  const base = config[`${prefix}_BASE_URL`] || (provider === 'maven' ? config.MAVEN_COLLECTOR_BASE : config.IGATEWAY_BASE_URL)
   const loginUrl = resolveUrl(config[`${prefix}_LOGIN_URL`] || (base ? `${base.replace(/\/$/, '')}/login` : undefined), base)
   await login(session, loginUrl, config[`${prefix}_USERNAME`] || config[`${prefix}_COLLECTOR_USERNAME`], config[`${prefix}_PASSWORD`] || config[`${prefix}_COLLECTOR_PASSWORD`])
   const endpoints = provider === 'maven' ? { payin: config.MAVEN_PAYIN_LIST_ENDPOINT || config.MAVEN_TRANSACTION_LIST_ENDPOINT, payout: config.MAVEN_P2P_PAYOUT_LIST_ENDPOINT } : { payin: config.IGATEWAY_PAYIN_TRANSACTION_URL, payout: config.IGATEWAY_PAYOUT_TRANSACTION_EGY_URL }

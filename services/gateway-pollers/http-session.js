@@ -12,6 +12,7 @@ export class HttpSession {
 
 export function parsePayload(payload) {
   if (Array.isArray(payload)) return payload
-  for (const key of ['data', 'items', 'results', 'transactions', 'rows', 'records']) if (Array.isArray(payload?.[key])) return payload[key]
+  for (const key of ['data', 'items', 'results', 'transactions', 'payouts', 'rows', 'records']) if (Array.isArray(payload?.[key])) return payload[key]
+  if (payload?.data && typeof payload.data === 'object') return parsePayload(payload.data)
   return []
 }
