@@ -44,7 +44,7 @@ export default function DataTable({
 
   return (
     <div className="max-w-full rounded-xl border border-border bg-card">
-      <div className="hidden overflow-x-auto md:block">
+      <div className="macbook-data-desktop hidden overflow-x-auto md:block">
       <table className="w-full min-w-max text-sm">
         <thead>
           <tr className="border-b border-border bg-surface text-right text-xs text-muted">
@@ -96,7 +96,7 @@ export default function DataTable({
       </table>
       </div>
 
-      <div className="space-y-3 p-3 md:hidden">
+      <div className="macbook-data-mobile space-y-3 p-3 md:hidden">
         {visibleData.map((row, i) => {
           const key = getRowKey(row, i)
           const primary = columns[0]

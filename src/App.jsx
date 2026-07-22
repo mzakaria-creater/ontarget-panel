@@ -39,6 +39,7 @@ const WalletMonitor = lazy(() => import('./pages/WalletMonitor'))
 import { LanguageProvider } from './components/LanguageContext'
 import MobileBottomNav from './components/MobileBottomNav'
 import { ThemeProvider } from './components/ThemeContext'
+import MacbookDock from './components/MacbookDock'
 
 function withBoundary(Page) {
   return <ErrorBoundary><Suspense fallback={<div className="flex h-full items-center justify-center bg-bg text-sm text-muted">جاري تحميل الصفحة...</div>}><Page /></Suspense></ErrorBoundary>
@@ -50,7 +51,7 @@ export default function App() {
       <BrowserRouter>
         <div className="flex h-screen w-screen overflow-hidden bg-bg text-text">
           <Sidebar />
-          <main className="min-w-0 flex-1 overflow-hidden pb-16 md:pb-0">
+          <main className="desktop-canvas min-w-0 flex-1 overflow-hidden pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<Navigate to="/monitor" replace />} />
               <Route path="/dashboard" element={<Navigate to="/monitor" replace />} />
@@ -90,6 +91,7 @@ export default function App() {
               <Route path="*" element={<Navigate to="/monitor" replace />} />
             </Routes>
           </main>
+          <MacbookDock />
           <MobileBottomNav />
         </div>
       </BrowserRouter>
