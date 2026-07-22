@@ -11,6 +11,7 @@ const DIRECT = [
   { to: '/report', icon: '🗄️', ar: 'TRX', en: 'TRX' },
   { to: '/payouts', icon: '💸', ar: 'المدفوعات الخارجة', en: 'Payouts' },
   { to: '/hub', icon: '🏛️', ar: 'الخزينة والمحافظ', en: 'Treasury & Wallets' },
+  { to: '/approval-queue', icon: '✅', ar: 'قائمة الموافقات', en: 'Approval Queue' },
 ]
 
 const ALL_PAGES = [...DIRECT, { to: '/gateway', icon: '🌐', ar: 'Gateway', en: 'Gateway' }, { to: '/tv', icon: '📺', ar: 'شاشة المراقبة', en: 'Monitor TV' }, { to: '/wallet-monitor', icon: '📱', ar: 'مراقبة المحافظ', en: 'Wallet Monitor' }, { to: '/mavenwallets', icon: '🏦', ar: 'محافظ Maven', en: 'Maven Wallets' }, { to: '/health', icon: '🩺', ar: 'صحة النظام', en: 'System Health' }, { to: '/wallet-sms-report', icon: '📊', ar: 'تقرير SMS للمحافظ', en: 'Wallet SMS Report' }, { to: '/wallet-flow', icon: '💰', ar: 'حركة المحافظ', en: 'Wallet Flow' }, { to: '/recovery-panel', icon: '🧭', ar: 'استرجاع ومراقبة', en: 'Recovery Panel' }, { to: '/telegram', icon: '🤖', ar: 'Telegram', en: 'Telegram' }, { to: '/recovery', icon: '⚡', ar: 'الاسترجاع', en: 'Recovery' }, { to: '/settlement', icon: '💼', ar: 'التسويات', en: 'Settlement' }, { to: '/blacklist', icon: '🚫', ar: 'القائمة السوداء', en: 'Blacklist' }, { to: '/report', icon: '📑', ar: 'التقرير', en: 'Report' }, { to: '/analytics', icon: '📈', ar: 'التحليلات', en: 'Analytics' }, { to: '/users', icon: '👥', ar: 'المستخدمون', en: 'Users' }]

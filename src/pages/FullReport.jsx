@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { startTransition, useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { formatAbsoluteDate, formatMoney, formatNumber } from '../utils/format'
@@ -21,6 +21,7 @@ const rowDate = (row) => String(row.tx_time || row.created_utc || row.updated_at
 export default function FullReport() {
   const { t } = useLanguage()
   const [tab, setTab] = useState('ov')
+  const [tabPending, setTabPending] = useState(false)
   const [filters, setFilters] = useState(defaultFilters)
   const [data, setData] = useState({ daily: [], wallets: [], txs: [], payouts: [], recon: [], outgoing: [] })
   const [loading, setLoading] = useState(true)
@@ -68,7 +69,7 @@ export default function FullReport() {
   return <div className="flex h-full min-h-0 flex-col bg-bg"><Topbar title={t('OnTarget — تقرير شامل', 'OnTarget — Full report')} subtitle={t('NagoPay × Maven × محافظ × SMS · حي', 'NagoPay × Maven × wallets × SMS · Live')} onRefresh={load} isFetching={loading} /><div className="flex-1 overflow-y-auto bg-bg p-4 md:p-6">
     {error && <div className="mb-4 rounded-xl border border-danger/30 bg-danger/10 p-3 text-sm text-danger">تعذر تحميل بعض مصادر التقرير: {error}</div>}
     <div className="sticky top-0 z-10 mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface/95 p-3 backdrop-blur"><label className="text-xs text-muted">من<input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="mr-2 rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-text" /></label><label className="text-xs text-muted">إلى<input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="mr-2 rounded-lg border border-border bg-card px-2 py-1.5 text-sm text-text" /></label><select value={filters.merchant} onChange={(e) => setFilters({ ...filters, merchant: e.target.value })} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text"><option value="">كل التجار</option>{merchants.map((merchant) => <option key={merchant}>{merchant}</option>)}</select><select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text"><option value="">كل الحالات</option><option>PAID</option><option>DECLINED</option><option>EXPIRED</option><option>UNDERPAID</option></select><button onClick={() => quick(7)} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:border-gold hover:text-gold">7 أيام</button><button onClick={() => quick('jul')} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:border-gold hover:text-gold">يوليو كله</button><button onClick={() => quick('all')} className="rounded-lg border border-border px-3 py-2 text-xs text-muted hover:border-gold hover:text-gold">كل البيانات</button><button onClick={reset} className="rounded-lg bg-gold px-3 py-2 text-xs font-bold text-bg">↺ إعادة</button></div>
-    <div className="mb-5 flex gap-1 overflow-x-auto border-b border-border">{TABS.map(([key, icon, ar, en]) => <button key={key} onClick={() => setTab(key)} className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold ${tab === key ? 'border-gold text-gold' : 'border-transparent text-muted hover:text-text'}`}>{icon} {t(ar, en)}</button>)}</div>
+    <div className={`mb-5 flex gap-1 overflow-x-auto border-b border-border ${tabPending ? 'opacity-80' : ''}`}>{TABS.map(([key, icon, ar, en]) => <button key={key} onClick={() => { setTabPending(true); startTransition(() => { setTab(key); setTabPending(false) }) }} className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold ${tab === key ? 'border-gold text-gold' : 'border-transparent text-muted hover:text-text'}`}>{icon} {t(ar, en)}</button>)}</div>
     {tab === 'ov' && <Overview data={filtered} stats={stats} recon={data.recon} />}
     {tab === 'dy' && <Daily data={filtered.daily} />}
     {tab === 'wl' && <Wallets data={filtered.wallets} recon={data.recon} />}

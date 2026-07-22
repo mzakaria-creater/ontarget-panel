@@ -25,6 +25,7 @@ const WalletSmsReport = lazy(() => import('./pages/WalletSmsReport'))
 const GatewayOverview = lazy(() => import('./pages/GatewayOverview'))
 const Payouts = lazy(() => import('./pages/Payouts'))
 const TreasuryHub = lazy(() => import('./pages/TreasuryHub'))
+const ApprovalQueue = lazy(() => import('./pages/ApprovalQueue'))
 import WalletFlow from './pages/WalletFlow'
 const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
 const WalletMonitor = lazy(() => import('./pages/WalletMonitor'))
@@ -57,6 +58,7 @@ export default function App() {
               <Route path="/gateway" element={withBoundary(GatewayOverview)} />
               <Route path="/payouts" element={withBoundary(Payouts)} />
               <Route path="/hub" element={withBoundary(TreasuryHub)} />
+              <Route path="/approval-queue" element={withBoundary(ApprovalQueue)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
               <Route path="/complaints" element={withBoundary(Complaints)} />
