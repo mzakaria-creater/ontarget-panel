@@ -6,44 +6,62 @@ import { useTheme } from './ThemeContext'
 
 const NAV_GROUPS = [
   {
-    label: 'الرئيسية',
+    label: 'المراقبة المباشرة',
     items: [
       { to: '/monitor', label: 'المراقبة', icon: '📊' },
       { to: '/tv', label: 'Monitor TV', icon: '📺' },
-      { to: '/smslive', label: 'الرسائل المباشرة', icon: '📨' },
-      { to: '/complaints', label: 'مهام الشكاوى', icon: '🧩' },
-      { to: '/telegram', label: 'Telegram Bot', icon: '🤖' },
-      { to: '/blacklist', label: 'القائمة السوداء', icon: '🚫' },
+      { to: '/tvscreen', label: 'شاشة TV', icon: '🖥️' },
+      { to: '/smslive', label: 'الرسائل المباشرة', icon: '📨', badgeKey: 'sms' },
+      { to: '/wallet-monitor', label: 'مراقبة المحافظ', icon: '📱' },
+      { to: '/health', label: 'صحة النظام', icon: '🩺' },
     ],
   },
   {
-    label: 'الأدوات',
+    label: 'الموافقات',
+    items: [
+      { to: '/payin-approval-queue', label: 'موافقات الإيداع', icon: '🧾', badgeKey: 'payin' },
+      { to: '/approval-queue', label: 'موافقات السحب', icon: '✅' },
+      { to: '/payout-list', label: 'P2P Payout Txs', icon: '📋' },
+    ],
+  },
+  {
+    label: 'العمليات',
     items: [
       { to: '/recovery', label: 'استرجاع', icon: '⚡', badgeKey: 'recovery' },
       { to: '/recovery-panel', label: 'استرجاع ومراقبة', icon: '🧭' },
-      { to: '/wallet-monitor', label: 'مراقبة المحافظ', icon: '📱' },
+      { to: '/complaints', label: 'مهام الشكاوى', icon: '🧩' },
+      { to: '/blacklist', label: 'القائمة السوداء', icon: '🚫' },
+      { to: '/telegram', label: 'Telegram Bot', icon: '🤖' },
+    ],
+  },
+  {
+    label: 'المحافظ والبنوك',
+    items: [
+      { to: '/wallets', label: 'المحافظ', icon: '💳' },
+      { to: '/wallet-flow', label: 'حركة المحافظ', icon: '💰' },
       { to: '/mavenwallets', label: 'محافظ Maven', icon: '🏦' },
-      { to: '/health', label: 'صحة النظام', icon: '🩺' },
+      { to: '/maven-payouts', label: 'Maven Payout TRX + Raw', icon: '💸' },
+      { to: '/hub', label: 'Treasury & Wallets', icon: '🏛️' },
       { to: '/wallet-sms-report', label: 'تقرير SMS للمحافظ', icon: '📊' },
+      { to: '/wallet-report', label: 'تقرير المحافظ', icon: '👛' },
+    ],
+  },
+  {
+    label: 'التقارير والتحليلات',
+    items: [
+      { to: '/report', label: 'التقرير الشامل', icon: '📑' },
+      { to: '/analytics', label: 'التحليلات', icon: '📊' },
+      { to: '/analytics-overview', label: 'تحليلات الأداء', icon: '📈' },
       { to: '/gateway', label: 'Gateway Overview', icon: '🔌' },
       { to: '/payouts', label: 'Payout Transactions', icon: '💸', badgeKey: 'payout' },
-      { to: '/hub', label: 'Treasury & Wallets', icon: '🏛️' },
-      { to: '/approval-queue', label: 'Approval Queue', icon: '✅' },
-      { to: '/payout-list', label: 'P2P Payout Txs', icon: '📋' },
+      { to: '/settlement', label: 'Settlement & P&L', icon: '💼' },
     ],
   },
   {
     label: 'الإعدادات',
     items: [
-      { to: '/wallets', label: 'المحافظ', icon: '💳' },
-      { to: '/wallet-flow', label: 'حركة المحافظ', icon: '💰' },
       { to: '/settings', label: 'الإعدادات', icon: '⚙️' },
       { to: '/users', label: 'المستخدمون والصلاحيات', icon: '👥' },
-      { to: '/report', label: 'التقرير الشامل', icon: '📑' },
-      { to: '/analytics', label: 'التحليلات', icon: '📊' },
-      { to: '/analytics-overview', label: 'تحليلات الأداء', icon: '📈' },
-      { to: '/wallet-report', label: 'تقرير المحافظ', icon: '👛' },
-      { to: '/settlement', label: 'Settlement & P&L', icon: '💼' },
     ],
   },
 ]

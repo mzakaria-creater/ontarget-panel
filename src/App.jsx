@@ -20,6 +20,7 @@ import Settlement from './pages/Settlement'
 const AutomationTV = lazy(() => import('./pages/AutomationTV'))
 const TvScreen = lazy(() => import('./pages/TvScreen'))
 const MavenWallets = lazy(() => import('./pages/MavenWallets'))
+const MavenPayouts = lazy(() => import('./pages/MavenPayouts'))
 const Health = lazy(() => import('./pages/Health'))
 const HealthV2 = lazy(() => import('./pages/HealthV2'))
 const WalletSmsReport = lazy(() => import('./pages/WalletSmsReport'))
@@ -27,6 +28,7 @@ const GatewayOverview = lazy(() => import('./pages/GatewayOverview'))
 const Payouts = lazy(() => import('./pages/Payouts'))
 const TreasuryHub = lazy(() => import('./pages/TreasuryHub'))
 const ApprovalQueue = lazy(() => import('./pages/ApprovalQueue'))
+const PayinApprovalQueue = lazy(() => import('./pages/PayinApprovalQueue'))
 const PayoutTransactionsV2 = lazy(() => import('./pages/PayoutTransactionsV2'))
 import WalletFlow from './pages/WalletFlow'
 const RecoveryPanel = lazy(() => import('./pages/RecoveryPanel'))
@@ -55,12 +57,14 @@ export default function App() {
               <Route path="/tvscreen" element={withBoundary(TvScreen)} />
               <Route path="/wallet-monitor" element={withBoundary(WalletMonitor)} />
               <Route path="/mavenwallets" element={withBoundary(MavenWallets)} />
+              <Route path="/maven-payouts" element={withBoundary(MavenPayouts)} />
               <Route path="/health" element={withBoundary(HealthV2)} />
               <Route path="/wallet-sms-report" element={withBoundary(WalletSmsReport)} />
               <Route path="/gateway" element={withBoundary(GatewayOverview)} />
               <Route path="/payouts" element={withBoundary(Payouts)} />
               <Route path="/hub" element={withBoundary(TreasuryHub)} />
               <Route path="/approval-queue" element={withBoundary(ApprovalQueue)} />
+              <Route path="/payin-approval-queue" element={withBoundary(PayinApprovalQueue)} />
               <Route path="/payout-list" element={withBoundary(PayoutTransactionsV2)} />
               <Route path="/smslive" element={withBoundary(SmsLive)} />
               <Route path="/blacklist" element={withBoundary(Blacklist)} />
