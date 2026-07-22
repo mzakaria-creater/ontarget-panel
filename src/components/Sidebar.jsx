@@ -29,6 +29,7 @@ const NAV_GROUPS = [
       { to: '/payouts', label: 'Payout Transactions', icon: '💸', badgeKey: 'payout' },
       { to: '/hub', label: 'Treasury & Wallets', icon: '🏛️' },
       { to: '/approval-queue', label: 'Approval Queue', icon: '✅' },
+      { to: '/payout-list', label: 'P2P Payout Txs', icon: '📋' },
     ],
   },
   {
