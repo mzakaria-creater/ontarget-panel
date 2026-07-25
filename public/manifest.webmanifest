@@ -1,0 +1,19 @@
+{
+  "name": "لوحة تحكم OnTarget",
+  "short_name": "OnTarget",
+  "start_url": "/monitor",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/apple-touch-icon.svg",
+      "sizes": "180x180",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
