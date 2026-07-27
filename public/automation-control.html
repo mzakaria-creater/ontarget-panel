@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>لوحة تحكم الأتمتة — OnTarget</title>
+<style>
+  :root{--bg:#0f1115;--card:#171a21;--border:#262b36;--text:#e8eaed;--muted:#8b93a3;--accent:#7c5cff;--green:#22c55e;--red:#ef4444;}
+  *{box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;margin:0;padding:24px;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:20px;line-height:1.7;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:18px;}
+  .card h2{font-size:15px;margin:0 0 14px;color:var(--accent);}
+  .row{display:flex;align-items:flex-start;gap:14px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .row:last-child{border-bottom:none;}
+  .rowtext{flex:1;min-width:0;}
+  .rowlabel{font-size:14px;line-height:1.55;}
+  .rowhint{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.55;}
+  .numinput{width:110px;background:#0d0f14;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px;font-size:13px;}
+  .switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;}
+  .switch.small{width:36px;height:20px;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{position:absolute;cursor:pointer;inset:0;background:#3a3f4b;transition:.2s;border-radius:24px;}
+  .slider:before{position:absolute;content:"";height:18px;width:18px;right:3px;bottom:3px;background:white;transition:.2s;border-radius:50%;}
+  .switch.small .slider:before{height:14px;width:14px;}
+  input:checked + .slider{background:var(--green);}
+  input:checked + .slider:before{transform:translateX(-20px);}
+  .switch.small input:checked + .slider:before{transform:translateX(-16px);}
+  .btn{background:var(--accent);color:white;border:none;border-radius:9px;padding:10px 18px;font-size:14px;cursor:pointer;min-height:44px;}
+  .btn.secondary{background:#2a2e38;}
+  .btn.danger{background:var(--red);}
+  .btn.small{padding:5px 10px;font-size:12px;min-height:34px;}
+  .btn:disabled{opacity:.5;cursor:default;}
+  .toolbar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .table-wrap{overflow-x:auto;border-radius:10px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px;}
+  th,td{padding:8px 6px;text-align:right;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;font-size:12px;}
+  #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f2430;border:1px solid var(--border);padding:10px 20px;border-radius:10px;font-size:13px;display:none;z-index:99;max-width:calc(100vw - 32px);}
+  #toast.show{display:block;}
+  #toast.ok{border-color:var(--green);color:var(--green);}
+  #toast.err{border-color:var(--red);color:var(--red);}
+  @media (max-width:640px){
+    body{padding:16px 12px calc(24px + env(safe-area-inset-bottom));}
+    .card{padding:14px;border-radius:12px;}
+    .row{gap:10px;}
+    .rowlabel{font-size:13px;}
+    .rowhint{font-size:11px;}
+    .numinput{width:96px;}
+    .toolbar{display:grid;grid-template-columns:1fr;}
+    .toolbar .btn{width:100%;}
+  }
+</style>
+</head>
+<body>
+  <h1>⚙️ لوحة تحكم الأتمتة</h1>
+  <div class="sub">تحكم كامل في إعدادات المطابقة والقرار التلقائي — أي تغيير هنا يُطبّق فورًا على كل معاملة جديدة.</div>
+
+  <div class="card">
+    <h2>الإعدادات العامة</h2>
+    <div id="settingsRows">
+      <div class="row"><label class="switch"><input type="checkbox" data-key="automation_enabled" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">تشغيل الأتمتة بالكامل</div><div class="rowhint">المفتاح الرئيسي — إذا تم إيقافه، تتوقف كل قواعد الأتمتة الأخرى.</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="maven_enabled" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">مصدر Maven مفعّل</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="ngpay_enabled" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">مصدر NGPay مفعّل</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="balance_check_enabled" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">فحص استمرارية الرصيد (Balance Continuity)</div><div class="rowhint">يتأكد أن أرقام الرصيد في السلسلة متسلسلة بشكل صحيح.</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="security_rules_enabled" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">قواعد الأمان (الحد الأقصى للمبلغ)</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="above_limit_to_manual"><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المبالغ فوق الحد تذهب للمراجعة اليدوية بدل الرفض التلقائي</div></div></div>
+      <div class="row"><input type="number" step="any" class="numinput" data-key="max_auto_amount" value="5000"><div class="rowtext"><div class="rowlabel">أقصى مبلغ للموافقة التلقائية (جنيه)</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="wallet_switch_auto_enabled" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">تبديل المحفظة تلقائيًا عند الامتلاء</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_crm_name_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة بالاسم من CRM</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_near_amount_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة بمبلغ قريب (Underpaid/Overpaid)</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_unique_amount_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة بمبلغ فريد على نفس الجهاز</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_trxid_matching"><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة برقم عملية OCR</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_balance_timing_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة بتوقيت الرصيد</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_wallet_verify_ocr"><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">التحقق من المحفظة عبر OCR</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_direct_field_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">مطابقة الحقول المباشرة (اسم/رقم)</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_nameonly_ocr_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة بالاسم فقط عبر CRM</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="use_account_number_matching" checked><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">المطابقة برقم الحساب المُرسل (AccountNumber)</div><div class="rowhint">مهم لمعاملات InstaPay والمعاملات البنكية التي تتضمن أكثر من رقم.</div></div></div>
+      <div class="row"><label class="switch"><input type="checkbox" data-key="turbo_mode"><span class="slider"></span></label><div class="rowtext"><div class="rowlabel">الوضع السريع (Turbo) — يتجاهل مهلة السماح</div><div class="rowhint">تنبيه: قد يرفض المعاملة بسرعة أكبر قبل اكتمال مهلة السماح.</div></div></div>
+      <div class="row"><input type="number" step="any" class="numinput" data-key="decline_grace_minutes" value="5"><div class="rowtext"><div class="rowlabel">مهلة السماح قبل الرفض التلقائي (دقائق)</div></div></div>
+      <div class="row"><input type="number" step="any" class="numinput" data-key="score_threshold" value="80"><div class="rowtext"><div class="rowlabel">الحد الأدنى لنقاط الثقة للموافقة</div></div></div>
+    </div>
+    <div class="toolbar">
+      <button class="btn" id="saveBtn" onclick="saveSettings()">حفظ التغييرات</button>
+      <button class="btn secondary" onclick="runSweepNow()">شغّل الفحص الدوري الآن</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>قواعد مخصّصة (Automation Rules)</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>النطاق</th><th>التاجر</th><th>المحفظة</th><th>المبلغ</th><th>الإجراء</th><th>الأولوية</th><th>مفعّلة</th><th></th></tr></thead>
+        <tbody id="rulesBody">
+          <tr><td>wallet</td><td>-</td><td>01014667311</td><td>1 - 10000</td><td>approve</td><td>10</td><td><label class="switch small"><input type="checkbox" class="rule-toggle" data-id="56377b5b-71bc-4210-832c-49e1b0c82efa" checked><span class="slider"></span></label></td><td><button class="btn danger small" onclick="deleteRule('56377b5b-71bc-4210-832c-49e1b0c82efa')">حذف</button></td></tr>
+          <tr><td>global</td><td>-</td><td>-</td><td>1 - 10000</td><td>approve</td><td>10</td><td><label class="switch small"><input type="checkbox" class="rule-toggle" data-id="7f7ded20-bc04-4159-8939-0457e40ab4c6" checked><span class="slider"></span></label></td><td><button class="btn danger small" onclick="deleteRule('7f7ded20-bc04-4159-8939-0457e40ab4c6')">حذف</button></td></tr>
+          <tr><td>global</td><td>-</td><td>-</td><td>1 - 10000</td><td>approve</td><td>10</td><td><label class="switch small"><input type="checkbox" class="rule-toggle" data-id="bb969879-20d4-4b00-a247-f9393f29d0bc" checked><span class="slider"></span></label></td><td><button class="btn danger small" onclick="deleteRule('bb969879-20d4-4b00-a247-f9393f29d0bc')">حذف</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+<script>
+const K = "ot-hub-f53fc3d5d8e327cd233c";
+function toast(msg, ok){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + (ok?'ok':'err');
+  setTimeout(()=>{ t.className=''; }, 2500);
+}
+async function saveSettings(){
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'جاري الحفظ...';
+  const payload = {action:'save_settings'};
+  document.querySelectorAll('[data-key]').forEach(el=>{
+    const key = el.dataset.key;
+    if (el.type === 'checkbox') payload[key] = el.checked;
+    else payload[key] = el.value === '' ? null : Number(el.value);
+  });
+  try{
+    const r = await fetch('?k='+encodeURIComponent(K), {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+    const j = await r.json();
+    if (j.ok) toast('✅ تم الحفظ بنجاح', true); else toast('❌ ' + (j.error||'error'), false);
+  }catch(e){ toast('❌ ' + e.message, false); }
+  btn.disabled = false; btn.textContent = 'حفظ التغييرات';
+}
+async function runSweepNow(){
+  toast('⏳ جاري التشغيل...', true);
+  try{
+    const r = await fetch('?k='+encodeURIComponent(K), {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({action:'run_sweep_now'})});
+    const j = await r.json();
+    if (j.ok) toast(`✅ استرجع ${j.recovered} · راجع ${j.rechecked} · كنس ${j.swept}`, true);
+    else toast('❌ ' + (j.error||'error'), false);
+  }catch(e){ toast('❌ ' + e.message, false); }
+}
+async function deleteRule(id){
+  if (!confirm('متأكد أنك تريد حذف هذه القاعدة؟')) return;
+  try{
+    const r = await fetch('?k='+encodeURIComponent(K), {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({action:'delete_rule', id})});
+    const j = await r.json();
+    if (j.ok) location.reload(); else toast('❌ ' + (j.error||'error'), false);
+  }catch(e){ toast('❌ ' + e.message, false); }
+}
+document.querySelectorAll('.rule-toggle').forEach(el=>{
+  el.addEventListener('change', async ()=>{
+    try{
+      const r = await fetch('?k='+encodeURIComponent(K), {method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({action:'toggle_rule', id: el.dataset.id, enabled: el.checked})});
+      const j = await r.json();
+      if (j.ok) toast('✅ تم التحديث', true); else toast('❌ ' + (j.error||'error'), false);
+    }catch(e){ toast('❌ ' + e.message, false); }
+  });
+});
+</script>
+</body>
+</html>
