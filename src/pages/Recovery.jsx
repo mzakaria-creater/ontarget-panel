@@ -25,6 +25,15 @@ function startOfTodayIso() {
   return d.toISOString()
 }
 
+// يحدد الـ Edge Function الصحيح حسب التاجر الرئيسي الفعلي للمعاملة.
+// لا تفترض provider افتراضي أبداً — أي تاجر جديد يُضاف هنا صراحة.
+function workerEndpointFor(masterMerchant) {
+  const key = String(masterMerchant || '').toLowerCase()
+  if (key === 'payfuture') return '/api/payfuture-worker'
+  if (key === 'ngpay') return '/api/ngpay-worker'
+  throw new Error(`لا يوجد مسار تنفيذ معروف لهذا التاجر: ${masterMerchant || '(فارغ)'}`)
+}
+
 export default function Recovery() {
   const { showToast } = useToast()
   const [windowHours, setWindowHours] = useState(() => loadFilters(PAGE_KEY, { windowHours: 2 }).windowHours)
@@ -93,7 +102,8 @@ export default function Recovery() {
 
     if (patchError) throw patchError
 
-    const workerResponse = await fetch('/api/maven-worker', {
+    const endpoint = workerEndpointFor(tx.master_merchant)
+    const workerResponse = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ single_tx: tx.tx_id, single_status: 'PAID', allow_reversal: true }),

@@ -15,6 +15,23 @@ import SystemPulse from '../components/SystemPulse'
 const PAGE_KEY = 'monitor'
 const DEFAULT_FILTERS = { status: '', payment_method: '', dateFrom: '', dateTo: '' }
 
+// يحدد الـ Edge Function الصحيح حسب التاجر الرئيسي الفعلي للمعاملة.
+// لا تفترض provider افتراضي أبداً — أي تاجر جديد يُضاف هنا صراحة.
+function workerEndpointFor(masterMerchant) {
+  const key = String(masterMerchant || '').toLowerCase()
+  if (key === 'payfuture') return '/api/payfuture-worker'
+  if (key === 'ngpay') return '/api/ngpay-worker'
+  throw new Error(`لا يوجد مسار تنفيذ معروف لهذا التاجر: ${masterMerchant || '(فارغ)'}`)
+}
+
+// اسم عرض محايد للتاجر، يُستخدم في رسائل النجاح/الخطأ بدل تثبيت اسم واحد
+function providerLabel(masterMerchant) {
+  const key = String(masterMerchant || '').toLowerCase()
+  if (key === 'payfuture') return 'PayFuture'
+  if (key === 'ngpay') return 'NGPay'
+  return 'OnTarget'
+}
+
 function startOfTodayIso() {
   const d = new Date()
   d.setHours(0, 0, 0, 0)
@@ -132,11 +149,22 @@ export default function Monitor() {
 
   async function updateTransactionStatus(tx, status) {
     const label = status === 'PAID' ? 'اعتماد' : 'رفض'
+    const provider = providerLabel(tx.master_merchant)
     setActionBusy(true)
+
+    let endpoint
+    try {
+      endpoint = workerEndpointFor(tx.master_merchant)
+    } catch (error) {
+      setActionBusy(false)
+      showToast(error.message, 'error')
+      return
+    }
+
     let response
     let payload
     try {
-      response = await fetch('/api/maven-worker', {
+      response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ single_tx: tx.tx_id, single_status: status, allow_reversal: true, manual_paid_reversal_confirmed: true }),
@@ -144,12 +172,12 @@ export default function Monitor() {
       payload = await response.json().catch(() => ({}))
     } catch (error) {
       setActionBusy(false)
-      showToast(`تعذر الاتصال بـ Maven: ${error.message}`, 'error')
+      showToast(`تعذر الاتصال بـ ${provider}: ${error.message}`, 'error')
       return
     }
     if (!response.ok || payload.ok === false) {
       setActionBusy(false)
-      showToast(`فشل تحديث Maven: ${payload.error || payload.message || `HTTP ${response.status}`}`, 'error')
+      showToast(`فشل تحديث ${provider}: ${payload.error || payload.message || `HTTP ${response.status}`}`, 'error')
       return
     }
     await supabase.from('maven_transactions').update({ approved_by: 'Manual' }).eq('tx_id', tx.tx_id)
@@ -175,24 +203,33 @@ export default function Monitor() {
 
   async function blacklistAndReject(tx) {
     setActionBusy(true)
+    const provider = providerLabel(tx.master_merchant)
     const { error: blacklistError } = await supabase.from('api_risk_blacklist').insert({ type: 'phone', value: tx.sender_number, reason: `حظر تلقائي بعد رفض العملية ${tx.tx_id}` })
     if (blacklistError && !String(blacklistError.message).toLowerCase().includes('duplicate')) {
       setActionBusy(false)
       showToast(`فشل إضافة الرقم للقائمة السوداء: ${blacklistError.message}`, 'error')
       return
     }
+    let endpoint
     try {
-      const response = await fetch('/api/maven-worker', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ single_tx: tx.tx_id, single_status: 'DECLINED', allow_reversal: true, manual_paid_reversal_confirmed: true }) })
+      endpoint = workerEndpointFor(tx.master_merchant)
+    } catch (error) {
+      setActionBusy(false)
+      showToast(`تم الحظر لكن ${error.message}`, 'error')
+      return
+    }
+    try {
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ single_tx: tx.tx_id, single_status: 'DECLINED', allow_reversal: true, manual_paid_reversal_confirmed: true }) })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok || payload.ok === false) throw new Error(payload.error || payload.message || `HTTP ${response.status}`)
       await supabase.from('maven_transactions').update({ approved_by: 'Manual' }).eq('tx_id', tx.tx_id)
       await logTransactionAction(tx, 'blacklist_and_decline', { before_status: tx.status, after_status: 'DECLINED', blacklist_value: tx.sender_number })
-      showToast('تم حظر الرقم ورفض العملية في Maven', 'success')
+      showToast(`تم حظر الرقم ورفض العملية في ${provider}`, 'success')
       setSelectedTx(null)
       table.refresh()
       kpis.refresh()
     } catch (error) {
-      showToast(`تم الحظر لكن فشل رفض العملية في Maven: ${error.message}`, 'error')
+      showToast(`تم الحظر لكن فشل رفض العملية في ${provider}: ${error.message}`, 'error')
     } finally {
       setActionBusy(false)
     }
@@ -205,11 +242,22 @@ export default function Monitor() {
       return
     }
     if (!window.confirm(`حفظ المبلغ الجديد للعملية ${tx.tx_id}؟`)) return
+    const provider = providerLabel(tx.master_merchant)
     setActionBusy(true)
+
+    let endpoint
+    try {
+      endpoint = workerEndpointFor(tx.master_merchant)
+    } catch (error) {
+      setActionBusy(false)
+      showToast(error.message, 'error')
+      return
+    }
+
     let response
     let payload
     try {
-      response = await fetch('/api/maven-worker', {
+      response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -223,12 +271,12 @@ export default function Monitor() {
       payload = await response.json().catch(() => ({}))
     } catch (error) {
       setActionBusy(false)
-      showToast(`تعذر الاتصال بـ Maven: ${error.message}`, 'error')
+      showToast(`تعذر الاتصال بـ ${provider}: ${error.message}`, 'error')
       return
     }
     setActionBusy(false)
     if (!response.ok || payload.ok === false) {
-      showToast(`رفض Maven تعديل المبلغ: ${payload.error || payload.message || `HTTP ${response.status}`}`, 'error')
+      showToast(`رفض ${provider} تعديل المبلغ: ${payload.error || payload.message || `HTTP ${response.status}`}`, 'error')
       return
     }
     showToast('تم تعديل المبلغ بنجاح', 'success')
