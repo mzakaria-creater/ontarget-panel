@@ -24,7 +24,32 @@ function operationBy(tx) {
   if (value.includes('ai') || value.includes('auto') || value.includes('bot')) return 'AI'
   if (value.includes('manual') || value.includes('operator') || value.includes('user')) return 'Manual'
   if (tx?.approved_by) return 'Manual'
-  return 'Maven'
+  return 'OnTarget Provider'
+}
+
+function IPhoneSmsPreview({ sms }) {
+  const isWithdrawal = sms.sms_category === 'withdrawal'
+  const raw = sms.raw_sms || sms.message || sms.sms_first_line || 'لا يوجد نص للرسالة'
+  const received = new Date(sms.received_at || sms.created_at || Date.now())
+  const time = Number.isNaN(received.getTime()) ? '—' : received.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Africa/Cairo' })
+  const sender = sms.sender_name || sms.sender_number || sms.provider || 'SMS'
+  return <section className="rounded-2xl border border-border bg-surface/70 p-4">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div><div className="text-sm font-bold text-text">معاينة الرسالة على الهاتف</div><div className="mt-1 text-xs text-muted">iPhone 17 Pro Max · الرسالة الفعلية كما وصلت</div></div>{isWithdrawal && <span className="rounded-full border border-danger/35 bg-danger/10 px-3 py-1 text-xs font-bold text-danger">Withdrawal SMS</span>}</div>
+    <div className={`mx-auto w-full max-w-[390px] rounded-[3.2rem] border-[6px] bg-[#050608] p-2 shadow-2xl ${isWithdrawal ? 'border-danger/80 shadow-danger/20' : 'border-slate-700'}`} dir="ltr">
+      <div className="relative min-h-[620px] overflow-hidden rounded-[2.55rem] bg-gradient-to-b from-[#101b2c] via-[#070b13] to-black text-white">
+        <div className="absolute left-1/2 top-2 z-10 h-7 w-28 -translate-x-1/2 rounded-full bg-black" aria-hidden="true" />
+        <div className="flex items-center justify-between px-7 pb-4 pt-4 text-[11px] font-bold"><span>{time}</span><span className="tracking-widest">5G ▮▮▮ ◉</span></div>
+        <div className="border-b border-white/10 px-5 pb-4 pt-2 text-center backdrop-blur"><div className={`mx-auto grid h-12 w-12 place-items-center rounded-full text-lg font-black ${isWithdrawal ? 'bg-danger' : 'bg-gold'}`}>{String(sender).slice(0, 1).toUpperCase()}</div><div className="mt-2 truncate text-sm font-semibold">{sender}</div><div className="mt-0.5 text-[11px] text-white/50">Text Message</div></div>
+        <div className="px-4 py-7" dir="rtl">
+          <div className="mb-3 text-center text-[11px] text-white/45">اليوم، {time}</div>
+          <div className={`mr-auto max-w-[88%] whitespace-pre-wrap break-words rounded-[1.35rem] rounded-bl-md px-4 py-3 text-right text-[15px] leading-7 shadow-lg ${isWithdrawal ? 'bg-[#3b151c] ring-1 ring-danger/60' : 'bg-[#2a2b30] ring-1 ring-white/10'}`}>{raw}</div>
+          <div className="mt-2 flex flex-wrap justify-end gap-2 text-[10px] text-white/45"><span>{sms.device_name || 'Unknown device'}</span><span>·</span><span>SIM {sms.sim_slot || '—'}</span></div>
+          <div className={`mt-6 rounded-2xl border p-4 ${isWithdrawal ? 'border-danger/35 bg-danger/10' : 'border-white/10 bg-white/5'}`}><div className="text-[11px] text-white/50">{isWithdrawal ? 'مبلغ السحب' : 'المبلغ'}</div><div className="mt-1 text-xl font-black">{formatMoney(sms.amount)}</div><div className="mt-3 text-[11px] text-white/50">المحفظة</div><div className="mt-1 font-mono text-sm">{sms.confirmed_wallet_number || sms.receiver_number || sms.wallet || '—'}</div></div>
+        </div>
+        <div className="absolute bottom-2 left-1/2 h-1.5 w-32 -translate-x-1/2 rounded-full bg-white/80" aria-hidden="true" />
+      </div>
+    </div>
+  </section>
 }
 
 export default function SmsLive() {
@@ -298,6 +323,7 @@ export default function SmsLive() {
             ['الرصيد بعدها', formatMoney(selectedSms.balance_after)],
           ]
           return <div className="space-y-4">
+            <IPhoneSmsPreview sms={selectedSms} />
             {tx?.proof_image_url && <div className="rounded-xl border border-border bg-surface p-3"><div className="mb-2 text-xs font-semibold text-muted">إثبات المعاملة</div><a href={tx.proof_image_url} target="_blank" rel="noreferrer"><img src={tx.proof_image_url} alt="إثبات المعاملة" className="max-h-80 w-full rounded-lg object-contain" /></a></div>}
             <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-surface p-4 text-sm md:grid-cols-3">
               {details.map(([label, value]) => <div key={label}><div className="text-xs text-muted">{label}</div><div className="mt-1 break-words font-semibold text-text">{value || '—'}</div></div>)}
