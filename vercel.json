@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/ngpay-worker", "destination": "https://yvwppyoaksyhycimvgtw.supabase.co/functions/v1/maven-http-worker" },
     { "source": "/api/payfuture-worker", "destination": "https://yvwppyoaksyhycimvgtw.supabase.co/functions/v1/payfuture-approve" },
