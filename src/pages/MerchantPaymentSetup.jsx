@@ -18,6 +18,9 @@ export default function MerchantPaymentSetup() {
   const [master, setMaster] = useState('all')
   const [sub, setSub] = useState('all')
   const [search, setSearch] = useState('')
+  const [matchFilter, setMatchFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState(EMPTY)
   const [saving, setSaving] = useState(false)
@@ -34,7 +37,7 @@ export default function MerchantPaymentSetup() {
   })
   const liveSms = useRealtimeTable({
     key: ['merchant-payment-live-sms'],
-    queryFn: async (sb) => sb.from('inbound_sms').select('id, receiver_number, wallet_number, confirmed_wallet_number, wallet, amount, received_at').gte('received_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).limit(10000),
+    queryFn: async (sb) => sb.from('inbound_sms').select('id, receiver_number, wallet_number, confirmed_wallet_number, wallet, amount, received_at').gte('received_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()).limit(10000),
     intervalMs: 30000,
   })
 
@@ -56,18 +59,25 @@ export default function MerchantPaymentSetup() {
 
   const masters = [...new Set(merchants.map((row) => row.master_merchant))]
   const subs = merchants.filter((row) => master === 'all' || row.master_merchant === master).map((row) => row.sub_merchant)
+  const periodSms = (liveSms.data || []).filter((row) => {
+    const received = row.received_at ? new Date(row.received_at).getTime() : 0
+    const from = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : 0
+    const to = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : Number.POSITIVE_INFINITY
+    return received >= from && received <= to
+  })
+  const periodSmsWallets = new Set(periodSms.flatMap((row) => [row.receiver_number, row.wallet_number, row.confirmed_wallet_number, row.wallet]).filter(Boolean).map((value) => String(value).replace(/\D/g, '')))
   const rows = (setup.data || []).filter((row) => {
     const term = search.trim().toLowerCase()
-    return (master === 'all' || row.master_merchant === master) && (sub === 'all' || row.sub_merchant === sub) && (!term || [row.master_merchant, row.sub_merchant, row.payment_method, row.account_number, row.account_name].join(' ').toLowerCase().includes(term))
+    const hasMatch = periodSmsWallets.has(String(row.account_number || '').replace(/\D/g, ''))
+    return (master === 'all' || row.master_merchant === master) && (sub === 'all' || row.sub_merchant === sub) && (!term || [row.master_merchant, row.sub_merchant, row.payment_method, row.account_number, row.account_name].join(' ').toLowerCase().includes(term)) && (matchFilter === 'all' || (matchFilter === 'matched' && hasMatch) || (matchFilter === 'unmatched' && !hasMatch))
   })
   const configuredMerchants = new Set(rows.map((row) => `${row.master_merchant}::${row.sub_merchant}`)).size
-  const liveSmsWallets = useMemo(() => new Set((liveSms.data || []).flatMap((row) => [row.receiver_number, row.wallet_number, row.confirmed_wallet_number, row.wallet]).filter(Boolean).map((value) => String(value).replace(/\D/g, ''))), [liveSms.data])
-  const liveSmsAccounts = new Set(rows.map((row) => String(row.account_number || '').replace(/\D/g, '')).filter((account) => account && liveSmsWallets.has(account))).size
-  const liveSmsAmount = (liveSms.data || []).reduce((total, row) => total + Number(row.amount || 0), 0)
+  const liveSmsAccounts = new Set(rows.map((row) => String(row.account_number || '').replace(/\D/g, '')).filter((account) => account && periodSmsWallets.has(account))).size
+  const liveSmsAmount = periodSms.reduce((total, row) => total + Number(row.amount || 0), 0)
 
   function exportRows() {
     const headers = ['Master merchant', 'Sub-merchant', 'Payment method', 'Account', 'Provider', 'Account name', 'Active', 'Live SMS']
-    const values = rows.map((row) => [row.master_merchant, row.sub_merchant, row.payment_method, row.account_number, row.provider || '', row.account_name || '', row.active ? 'Yes' : 'No', liveSmsWallets.has(String(row.account_number || '').replace(/\D/g, '')) ? 'Yes' : 'No'])
+    const values = rows.map((row) => [row.master_merchant, row.sub_merchant, row.payment_method, row.account_number, row.provider || '', row.account_name || '', row.active ? 'Yes' : 'No', periodSmsWallets.has(String(row.account_number || '').replace(/\D/g, '')) ? 'Yes' : 'No'])
     const csv = [headers, ...values].map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' }))
     const link = document.createElement('a'); link.href = url; link.download = `merchant-payment-setup-${new Date().toISOString().slice(0, 10)}.csv`; link.click(); URL.revokeObjectURL(url)
@@ -101,15 +111,19 @@ export default function MerchantPaymentSetup() {
         <div className="rounded-2xl border border-border bg-card p-4"><div className="flex items-center gap-2 text-xs text-muted"><Building2 size={15} /> التجار المهيئون</div><div className="mt-2 text-2xl font-bold text-gold">{configuredMerchants}</div></div>
         <div className="rounded-2xl border border-border bg-card p-4"><div className="flex items-center gap-2 text-xs text-muted"><CreditCard size={15} /> طرق الدفع</div><div className="mt-2 text-2xl font-bold text-gold">{new Set(rows.map((row) => row.payment_method)).size}</div></div>
         <div className="rounded-2xl border border-border bg-card p-4"><div className="flex items-center gap-2 text-xs text-muted"><WalletCards size={15} /> الحسابات</div><div className="mt-2 text-2xl font-bold text-gold">{new Set(rows.map((row) => row.account_number)).size}</div></div>
-        <div className="rounded-2xl border border-success/30 bg-success/5 p-4"><div className="flex items-center gap-2 text-xs text-muted"><span className="h-2 w-2 rounded-full bg-success" /> Live SMS</div><div className="mt-2 text-2xl font-bold text-success">{liveSmsAccounts}</div><div className="mt-1 text-xs text-muted">{liveSms.data?.length || 0} SMS · {liveSmsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EGP / 24h</div></div>
+        <div className="rounded-2xl border border-success/30 bg-success/5 p-4"><div className="flex items-center gap-2 text-xs text-muted"><span className="h-2 w-2 rounded-full bg-success" /> Live SMS matched</div><div className="mt-2 text-2xl font-bold text-success">{new Set([...periodSmsWallets].filter((wallet) => rows.some((row) => String(row.account_number || '').replace(/\D/g, '') === wallet))).size}</div><div className="mt-1 text-xs text-muted">{periodSms.length} SMS · {liveSmsAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EGP</div></div>
+        <div className="rounded-2xl border border-warning/30 bg-warning/5 p-4"><div className="flex items-center gap-2 text-xs text-muted"><span className="h-2 w-2 rounded-full bg-warning" /> SMS coverage</div><div className="mt-2 text-2xl font-bold text-warning">{rows.length ? Math.round((liveSmsAccounts / rows.length) * 100) : 0}%</div><div className="mt-1 text-xs text-muted">{liveSmsAccounts} / {rows.length} configured accounts</div></div>
       </div>
       <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-border bg-card p-4">
         <label className="min-w-[240px] flex-1 text-xs text-muted"><span className="mb-1 flex items-center gap-2"><Search size={14} /> بحث</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="تاجر، طريقة أو حساب..." className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" /></label>
         <Field label="التاجر الرئيسي"><select value={master} onChange={(e) => { setMaster(e.target.value); setSub('all') }} className="mt-1 min-w-48 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"><option value="all">كل التجار الرئيسيين</option>{masters.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
         <Field label="التاجر الفرعي"><select value={sub} onChange={(e) => setSub(e.target.value)} className="mt-1 min-w-48 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"><option value="all">كل التجار الفرعيين</option>{[...new Set(subs)].sort().map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
+        <Field label="مطابقة Live SMS"><select value={matchFilter} onChange={(e) => setMatchFilter(e.target.value)} className="mt-1 min-w-40 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text"><option value="all">الكل</option><option value="matched">لديها SMS</option><option value="unmatched">بدون SMS</option></select></Field>
+        <Field label="من"><input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" /></Field>
+        <Field label="إلى"><input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="mt-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text" /></Field>
       </div>
       <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-        <table className="w-full min-w-[1050px] text-sm"><thead className="bg-surface text-xs text-muted"><tr><th className="px-4 py-3 text-right">التاجر الرئيسي</th><th className="px-4 py-3 text-right">التاجر الفرعي</th><th className="px-4 py-3 text-right">طريقة الدفع</th><th className="px-4 py-3 text-right">الحساب</th><th className="px-4 py-3 text-right">المزود / الاسم</th><th className="px-4 py-3 text-right">Live SMS</th><th className="px-4 py-3 text-right">الحالة</th><th className="px-4 py-3 text-right">إجراء</th></tr></thead><tbody>{rows.map((row) => { const account = String(row.account_number || '').replace(/\D/g, ''); const hasLiveSms = account && liveSmsWallets.has(account); return <tr key={row.id} className="border-t border-border"><td className="px-4 py-3 font-semibold">{row.master_merchant}</td><td className="px-4 py-3">{row.sub_merchant}</td><td className="px-4 py-3 font-medium">{row.payment_method}</td><td className="px-4 py-3 font-mono text-gold">{row.account_number}</td><td className="px-4 py-3 text-muted">{row.provider || '—'}{row.account_name ? ` · ${row.account_name}` : ''}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${hasLiveSms ? 'bg-success/15 text-success' : 'bg-surface text-muted'}`}>{hasLiveSms ? '● Live' : '—'}</span></td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${row.active ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'}`}>{row.active ? 'نشط' : 'موقوف'}</span></td><td className="px-4 py-3"><button onClick={() => toggle(row)} className="rounded-lg border border-border px-3 py-1.5 text-xs text-text hover:border-gold">{row.active ? 'إيقاف' : 'تفعيل'}</button></td></tr> })}{!rows.length && <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-muted">لا توجد إعدادات مطابقة للفلاتر</td></tr>}</tbody></table>
+        <table className="w-full min-w-[1050px] text-sm"><thead className="bg-surface text-xs text-muted"><tr><th className="px-4 py-3 text-right">التاجر الرئيسي</th><th className="px-4 py-3 text-right">التاجر الفرعي</th><th className="px-4 py-3 text-right">طريقة الدفع</th><th className="px-4 py-3 text-right">الحساب</th><th className="px-4 py-3 text-right">المزود / الاسم</th><th className="px-4 py-3 text-right">Live SMS</th><th className="px-4 py-3 text-right">الحالة</th><th className="px-4 py-3 text-right">إجراء</th></tr></thead><tbody>{rows.map((row) => { const account = String(row.account_number || '').replace(/\D/g, ''); const hasLiveSms = account && periodSmsWallets.has(account); return <tr key={row.id} className="border-t border-border"><td className="px-4 py-3 font-semibold">{row.master_merchant}</td><td className="px-4 py-3">{row.sub_merchant}</td><td className="px-4 py-3 font-medium">{row.payment_method}</td><td className="px-4 py-3 font-mono text-gold">{row.account_number}</td><td className="px-4 py-3 text-muted">{row.provider || '—'}{row.account_name ? ` · ${row.account_name}` : ''}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${hasLiveSms ? 'bg-success/15 text-success' : 'bg-surface text-muted'}`}>{hasLiveSms ? '● Live' : '—'}</span></td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-bold ${row.active ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'}`}>{row.active ? 'نشط' : 'موقوف'}</span></td><td className="px-4 py-3"><button onClick={() => toggle(row)} className="rounded-lg border border-border px-3 py-1.5 text-xs text-text hover:border-gold">{row.active ? 'إيقاف' : 'تفعيل'}</button></td></tr> })}{!rows.length && <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-muted">لا توجد إعدادات مطابقة للفلاتر</td></tr>}</tbody></table>
       </div>
       {setup.error && <div className="rounded-xl border border-danger/30 bg-danger/10 p-4 text-sm text-danger">تعذر تحميل إعدادات الدفع: {setup.error.message}</div>}
     </div>
