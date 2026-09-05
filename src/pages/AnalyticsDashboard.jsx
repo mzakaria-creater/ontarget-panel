@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
+import TransactionSmsTable from '../components/TransactionSmsTable'
 
 const COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#ef4444']
 
@@ -32,6 +33,7 @@ export default function AnalyticsDashboard() {
   const { showToast } = useToast()
   const [view, setView] = useState('chart')
   const [transactions, setTransactions] = useState([])
+  const [smsRows, setSmsRows] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -42,11 +44,10 @@ export default function AnalyticsDashboard() {
   async function loadData() {
     setLoading(true)
     setError('')
-    const { data, error: queryError } = await supabase
-      .from('maven_transactions')
-      .select('tx_id, created_utc, payment_method, amount, status, sender_name, master_merchant')
-      .order('created_utc', { ascending: false })
-      .limit(200)
+    const [{ data, error: queryError }, { data: smsData }] = await Promise.all([
+      supabase.from('maven_transactions').select('tx_id, created_utc, payment_method, amount, status, sender_name, master_merchant').order('created_utc', { ascending: false }).limit(200),
+      supabase.from('inbound_sms').select('id, consumed_by_tx_id, matched_transaction_id, maven_transaction_id, received_at, amount, sender_number, sender_name, provider, raw_sms, message, trx_id, trx_reference, match_status, matched').order('received_at', { ascending: false }).limit(2000),
+    ])
 
     if (queryError) {
       setError(queryError.message)
@@ -55,6 +56,7 @@ export default function AnalyticsDashboard() {
     } else {
       setTransactions((data || []).map(normalizeTransaction))
     }
+    setSmsRows(smsData || [])
     setLoading(false)
   }
 
@@ -132,8 +134,8 @@ export default function AnalyticsDashboard() {
           {[['Total Transactions', stats.totalTransactions.toLocaleString(), 'text-gold'], ['Total Volume', currency(stats.totalVolume), 'text-cyan-400'], ['Success Rate', `${stats.successRate.toFixed(1)}%`, 'text-success'], ['Avg Transaction', currency(stats.avgTransaction), 'text-violet-400'], ['Failed Txns', stats.failedTransactions, 'text-danger']].map(([label, value, tone]) => <div key={label} className="rounded-xl border border-border bg-card p-5"><p className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</p><p className={`mt-2 text-2xl font-bold ${tone}`}>{value}</p></div>)}
         </div>
 
-        {view === 'chart' && <div className="space-y-6"><div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><div className="rounded-xl border border-border bg-card p-5"><h2 className="mb-4 font-bold">Daily Transactions</h2><div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={dailyData}><CartesianGrid strokeDasharray="3 3" stroke="#1e2535" vertical={false} /><XAxis dataKey="name" stroke="#6b7280" fontSize={12} /><YAxis stroke="#6b7280" fontSize={12} /><Tooltip contentStyle={{ background: '#13161e', border: '1px solid #1e2535' }} /><Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></div><div className="rounded-xl border border-border bg-card p-5"><h2 className="mb-4 font-bold">Payment Methods</h2><div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={methodData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={4}>{methodData.map((entry, index) => <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#13161e', border: '1px solid #1e2535' }} /><Legend /></PieChart></ResponsiveContainer></div></div></div><TransactionTable rows={filtered.slice(0, 10)} badgeClass={badgeClass} /></div>}
-        {view === 'table' && <TransactionTable rows={filtered} badgeClass={badgeClass} />}
+        {view === 'chart' && <div className="space-y-6"><div className="grid grid-cols-1 gap-6 lg:grid-cols-2"><div className="rounded-xl border border-border bg-card p-5"><h2 className="mb-4 font-bold">Daily Transactions</h2><div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={dailyData}><CartesianGrid strokeDasharray="3 3" stroke="#1e2535" vertical={false} /><XAxis dataKey="name" stroke="#6b7280" fontSize={12} /><YAxis stroke="#6b7280" fontSize={12} /><Tooltip contentStyle={{ background: '#13161e', border: '1px solid #1e2535' }} /><Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></div><div className="rounded-xl border border-border bg-card p-5"><h2 className="mb-4 font-bold">Payment Methods</h2><div className="h-[300px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={methodData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90} paddingAngle={4}>{methodData.map((entry, index) => <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip contentStyle={{ background: '#13161e', border: '1px solid #1e2535' }} /><Legend /></PieChart></ResponsiveContainer></div></div></div><TransactionTable rows={filtered.slice(0, 10)} smsRows={smsRows} badgeClass={badgeClass} /></div>}
+        {view === 'table' && <TransactionTable rows={filtered} smsRows={smsRows} badgeClass={badgeClass} />}
         {view === 'pivot' && <PivotTable transactions={filtered} />}
       </div>
     </div>
@@ -144,8 +146,8 @@ function MultiSelect({ label, values, options, onChange }) {
   return <label className="text-xs text-muted"><span className="mb-1 block">{label} <span className="text-gold">{values.length ? `(${values.length})` : ''}</span></span><select multiple value={values} onChange={(event) => onChange([...event.target.selectedOptions].map((option) => option.value))} className="min-w-44 rounded-lg border border-border bg-surface px-2 py-2 text-sm text-text" size={Math.min(Math.max(options.length, 2), 4)}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>
 }
 
-function TransactionTable({ rows, badgeClass }) {
-  return <div className="overflow-x-auto rounded-xl border border-border bg-card"><div className="border-b border-border p-5 font-bold">All Transactions <span className="ml-2 text-xs font-normal text-muted">{rows.length} rows</span></div><table className="w-full text-left text-sm"><thead className="bg-surface text-xs uppercase text-muted"><tr>{['ID', 'Date', 'Method', 'Customer', 'Amount', 'Status'].map((head) => <th key={head} className="px-4 py-3">{head}</th>)}</tr></thead><tbody>{rows.map((tx) => <tr key={tx.id} className="border-t border-border hover:bg-surface"><td className="px-4 py-3 font-mono text-violet-400">{tx.id}</td><td className="px-4 py-3 text-muted">{tx.date ? new Date(tx.date).toLocaleDateString() : '—'}</td><td className="px-4 py-3">{tx.method}</td><td className="px-4 py-3 text-muted">{tx.customerName}</td><td className="px-4 py-3 font-bold">{currency(tx.amount)}</td><td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${badgeClass(tx.status)}`}>{tx.status}</span></td></tr>)}</tbody></table>{!rows.length && <p className="p-8 text-center text-sm text-muted">No transactions found</p>}</div>
+function TransactionTable({ rows, smsRows }) {
+  return <TransactionSmsTable transactions={rows} smsRows={smsRows} title="All transactions" />
 }
 
 function PivotTable({ transactions }) {

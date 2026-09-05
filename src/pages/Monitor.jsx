@@ -6,11 +6,11 @@ import { loadFilters, saveFilters } from '../utils/storage'
 import { formatMoney, formatNumber, formatRelativeTime, formatAbsoluteDate } from '../utils/format'
 import Topbar from '../components/Topbar'
 import StatCard from '../components/StatCard'
-import DataTable from '../components/DataTable'
 import Badge from '../components/Badge'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 import SystemPulse from '../components/SystemPulse'
+import TransactionSmsTable from '../components/TransactionSmsTable'
 
 const PAGE_KEY = 'monitor'
 const DEFAULT_FILTERS = { status: '', payment_method: '', dateFrom: '', dateTo: '' }
@@ -469,16 +469,14 @@ export default function Monitor() {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={visibleRows}
-          loading={table.isLoading}
-          error={table.error}
-          onRowClick={openTransaction}
-          emptyEmoji="🧾"
+        <TransactionSmsTable
+          transactions={visibleRows}
+          smsRows={smsQuery.data || []}
+          loading={table.isLoading || smsQuery.isLoading}
+          error={table.error || smsQuery.error}
+          title="المعاملات الخام + رسائل SMS الخام"
           emptyTitle="لا توجد عمليات مطابقة"
-          emptySubtitle="جرّب تعديل الفلاتر"
-          getRowKey={(row) => row.tx_id}
+          onTransactionClick={openTransaction}
         />
       </div>
 

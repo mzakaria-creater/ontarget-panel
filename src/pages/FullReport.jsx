@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { formatAbsoluteDate, formatMoney, formatNumber } from '../utils/format'
 import { useLanguage } from '../components/LanguageContext'
 import Topbar from '../components/Topbar'
-import DataTable from '../components/DataTable'
+import TransactionSmsTable from '../components/TransactionSmsTable'
 
 const COLORS = ['#d4af37', '#2ecc71', '#3498db', '#9b59b6', '#e67e22', '#e74c3c', '#1abc9c']
 const TABS = [['ov', '📊', 'نظرة عامة', 'Overview'], ['dy', '📅', 'يومي', 'Daily'], ['wl', '👛', 'المحافظ', 'Wallets'], ['mr', '🏢', 'التجار', 'Merchants'], ['sm', '📱', 'SMS وتدقيق', 'SMS audit'], ['og', '💸', 'الخارج', 'Outgoing'], ['tx', '🗄️', 'المعاملات', 'Transactions']]
@@ -17,7 +17,7 @@ export default function FullReport() {
   const { t } = useLanguage()
   const [tab, setTab] = useState('ov')
   const [filters, setFilters] = useState({ from: '2026-07-01', to: '2026-07-21', merchant: '', status: '' })
-  const [data, setData] = useState({ daily: [], wallets: [], txs: [], recon: [], outgoing: [] })
+  const [data, setData] = useState({ daily: [], wallets: [], txs: [], recon: [], outgoing: [], rawSms: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -29,10 +29,11 @@ export default function FullReport() {
       supabase.from('v_wallet_recent_transactions').select('*').order('tx_time', { ascending: false }).limit(5000),
       supabase.from('v_wallet_sms_reconciliation').select('*'),
       supabase.from('v_report_outgoing').select('*').order('received_at', { ascending: false }).limit(500),
+      supabase.from('inbound_sms').select('id, consumed_by_tx_id, matched_transaction_id, maven_transaction_id, received_at, amount, sender_number, sender_name, provider, raw_sms, message, trx_id, trx_reference, match_status, matched').order('received_at', { ascending: false }).limit(5000),
     ])
     const failed = queries.find((item) => item.error)
     if (failed) setError(failed.error.message)
-    setData({ daily: queries[0].data || [], wallets: queries[1].data || [], txs: queries[2].data || [], recon: queries[3].data || [], outgoing: queries[4].data || [] })
+    setData({ daily: queries[0].data || [], wallets: queries[1].data || [], txs: queries[2].data || [], recon: queries[3].data || [], outgoing: queries[4].data || [], rawSms: queries[5].data || [] })
     setLoading(false)
   }
   useEffect(() => { load(); const timer = setInterval(load, 120000); return () => clearInterval(timer) }, [])
@@ -67,7 +68,7 @@ export default function FullReport() {
     {tab === 'mr' && <Merchants data={filtered.wallets} />}
     {tab === 'sm' && <SmsAudit data={data.recon} />}
     {tab === 'og' && <Outgoing data={data.outgoing} />}
-    {tab === 'tx' && <Transactions data={filtered.txs} loading={loading} error={error} />}
+    {tab === 'tx' && <Transactions data={filtered.txs} smsRows={data.rawSms} loading={loading} error={error} />}
   </div></div>
 }
 
@@ -88,7 +89,7 @@ function SmsAudit({ data }) { const totals = data.reduce((a, row) => ({ paid: a.
 
 function Outgoing({ data }) { const total = data.reduce((s, row) => s + asNum(row.amount), 0); return <><Kpis items={[["إجمالي الخارج (EGP)", formatMoney(total), 'text-danger'], ['عدد السحوبات', formatNumber(data.length), 'text-gold'], ['مستلم معروف', formatNumber(data.filter((row) => row.recipient).length), 'text-blue-500']]} /><Panel title="📋 سجل السحوبات"><TableWrap><table><thead><tr><th>الوقت</th><th>المبلغ</th><th>المستلم</th><th>الجهاز</th><th>الرصيد بعدها</th></tr></thead><tbody>{data.map((row, i) => <tr key={row.id || `${row.received_at}-${i}`}><td>{formatAbsoluteDate(row.received_at)}</td><td className="text-danger">{formatMoney(row.amount)}</td><td>{row.recipient || '—'}</td><td>{row.webhook_name || '—'}</td><td>{formatMoney(row.balance_after)}</td></tr>)}</tbody></table></TableWrap></Panel></> }
 
-function Transactions({ data, loading, error }) { const columns = [{ key: 'tx_id', label: 'TX ID', render: (row) => <span className="font-mono text-gold">{row.tx_id}</span> }, { key: 'wallet', label: 'المحفظة', render: (row) => <span className="font-mono text-xs">{shortWallet(row.wallet)}</span> }, { key: 'amount', label: 'المبلغ', render: (row) => formatMoney(row.amount) }, { key: 'status', label: 'الحالة', render: (row) => <span className={`rounded-full px-2 py-1 text-xs font-bold ${row.status === 'PAID' ? 'bg-success/15 text-success' : row.status === 'DECLINED' ? 'bg-danger/15 text-danger' : 'bg-warning/15 text-warning'}`}>{row.status}</span> }, { key: 'tx_time', label: 'التوقيت', render: (row) => formatAbsoluteDate(row.tx_time) }]; return <Panel title="🗄️ سجل المعاملات"><DataTable columns={columns} data={data} loading={loading} error={error ? new Error(error) : null} getRowKey={(row) => row.tx_id} emptyEmoji="🧾" emptyTitle="لا توجد معاملات" emptySubtitle="غيّر الفلاتر أو حدّث البيانات" /></Panel> }
+function Transactions({ data, smsRows, loading, error }) { return <Panel title="🗄️ سجل المعاملات الخام + SMS الخام"><TransactionSmsTable transactions={data} smsRows={smsRows} loading={loading} error={error ? new Error(error) : null} title="المعاملات الخام + رسائل SMS الخام" emptyTitle="لا توجد معاملات" /></Panel> }
 
 function Kpis({ items }) { return <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">{items.map(([label, value, tone]) => <div key={label} className="rounded-2xl border border-border bg-card p-4"><div className="text-xs text-muted">{label}</div><div className={`mt-2 text-xl font-black ${tone}`}>{value}</div></div>)}</div> }
 function Panel({ title, children }) { return <section className="mb-5 rounded-2xl border border-border bg-card p-4 md:p-5"><h2 className="mb-4 font-bold text-gold">{title}</h2>{children}</section> }
