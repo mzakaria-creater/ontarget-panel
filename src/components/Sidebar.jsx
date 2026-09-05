@@ -29,6 +29,7 @@ const NAV_GROUPS = [
       { to: '/analytics', label: 'التحليلات', icon: '📊' },
       { to: '/analytics-overview', label: 'تحليلات الأداء', icon: '📈' },
       { to: '/wallet-report', label: 'تقرير المحافظ', icon: '👛' },
+      { to: '/merchant-payment-setup', label: 'إعداد دفع التجار', icon: '🧩' },
       { to: '/settlement', label: 'Settlement & P&L', icon: '💼' },
     ],
   },
