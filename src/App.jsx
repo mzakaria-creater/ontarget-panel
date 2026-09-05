@@ -12,6 +12,7 @@ import AnalyticsDashboard from './pages/AnalyticsDashboard'
 import AnalyticsPage from './pages/AnalyticsPage'
 import WalletReport from './pages/WalletReport'
 import MerchantPaymentSetup from './pages/MerchantPaymentSetup'
+import ExecutiveDashboard from './pages/ExecutiveDashboard'
 import Blacklist from './pages/Blacklist'
 import Complaints from './pages/Complaints'
 import TelegramBot from './pages/TelegramBot'
@@ -49,6 +50,8 @@ export default function App() {
               <Route path="/analytics-overview" element={withBoundary(AnalyticsPage)} />
               <Route path="/wallet-report" element={withBoundary(WalletReport)} />
               <Route path="/merchant-payment-setup" element={withBoundary(MerchantPaymentSetup)} />
+              <Route path="/executive-dashboard" element={withBoundary(ExecutiveDashboard)} />
+              <Route path="/executive-dashboard/:tab" element={withBoundary(ExecutiveDashboard)} />
               <Route path="*" element={<Navigate to="/monitor" replace />} />
             </Routes>
           </main>
