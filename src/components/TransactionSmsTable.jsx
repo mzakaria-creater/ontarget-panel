@@ -33,13 +33,14 @@ export default function TransactionSmsTable({ transactions = [], smsRows = [], l
 
   const smsCount = transactions.reduce((count, tx) => count + (smsByTx.get(String(txIdOf(tx))) || []).length, 0)
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-card">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-5">
+    <div className="raw-transaction-table max-h-[calc(100vh-330px)] min-h-[320px] overflow-auto rounded-xl border border-border bg-card shadow-sm">
+      <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/95 p-4 backdrop-blur">
         <div className="font-bold">{title}</div>
         <div className="text-xs text-muted">{transactions.length} transactions · {smsCount} SMS rows</div>
       </div>
-      <table className="w-full min-w-[1100px] text-left text-sm">
-        <thead className="bg-surface text-xs uppercase text-muted">
+      <table className="w-full min-w-[980px] table-fixed text-left text-sm">
+        <colgroup><col className="w-[68px]" /><col className="w-[140px]" /><col className="w-[125px]" /><col className="w-[155px]" /><col className="w-[180px]" /><col className="w-[120px]" /><col className="w-[115px]" /><col /></colgroup>
+        <thead className="sticky top-[57px] z-10 bg-surface text-xs uppercase text-muted shadow-[0_1px_0_var(--color-border)]">
           <tr>
             <th className="px-4 py-3">Type</th>
             <th className="px-4 py-3">TRX ID</th>
@@ -68,24 +69,24 @@ export default function TransactionSmsTable({ transactions = [], smsRows = [], l
 function TransactionGroup({ tx, txId, linkedSms, onTransactionClick }) {
   return <>
     <tr onClick={() => onTransactionClick?.(tx)} className={`border-t border-border bg-card hover:bg-surface ${onTransactionClick ? 'cursor-pointer' : ''}`}>
-      <td className="px-4 py-3 font-semibold text-gold">TRX</td>
-      <td className="px-4 py-3 font-mono font-bold text-gold">{txId || '—'}</td>
-      <td className="px-4 py-3 text-muted">{linkedSms.length ? `${linkedSms.length} linked` : '—'}</td>
-      <td className="px-4 py-3 text-muted">{formatAbsoluteDate(tx.created_utc || tx.tx_time || tx.created_at || tx.date)}</td>
-      <td className="px-4 py-3">{tx.payment_method || tx.method || tx.sender_name || '—'}</td>
-      <td className="px-4 py-3 font-bold">{formatMoney(tx.amount)}</td>
-      <td className="px-4 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass(tx.status)}`}>{tx.status || '—'}</span></td>
-      <td className="px-4 py-3 text-muted">Raw Maven transaction</td>
+      <td className="px-3 py-2.5 font-semibold text-gold">TRX</td>
+      <td className="truncate px-3 py-2.5 font-mono font-bold text-gold">{txId || '—'}</td>
+      <td className="px-3 py-2.5 text-muted">{linkedSms.length ? `${linkedSms.length} linked` : '—'}</td>
+      <td className="truncate px-3 py-2.5 text-muted">{formatAbsoluteDate(tx.created_utc || tx.tx_time || tx.created_at || tx.date)}</td>
+      <td className="truncate px-3 py-2.5">{tx.payment_method || tx.method || tx.sender_name || '—'}</td>
+      <td className="px-3 py-2.5 font-bold">{formatMoney(tx.amount)}</td>
+      <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${statusClass(tx.status)}`}>{tx.status || '—'}</span></td>
+      <td className="truncate px-3 py-2.5 text-muted">Raw Maven transaction</td>
     </tr>
     {linkedSms.map((sms, index) => <tr key={`${String(txId)}-sms-${sms.id ?? index}`} className="border-t border-border/60 bg-success/5 text-xs">
-      <td className="px-4 py-3 pl-8 font-semibold text-success">↳ SMS</td>
-      <td className="px-4 py-3 font-mono text-gold">{txId || '—'}</td>
-      <td className="px-4 py-3 font-mono font-bold text-success">{sms.id || '—'}</td>
-      <td className="px-4 py-3 text-muted">{formatAbsoluteDate(sms.received_at || sms.created_at)}</td>
-      <td className="px-4 py-3">{sms.sender_name || sms.sender_number || sms.provider || '—'}</td>
-      <td className="px-4 py-3 font-bold text-success">{formatMoney(sms.amount)}</td>
-      <td className="px-4 py-3 text-success">{sms.match_status || (sms.matched ? 'MATCHED' : 'LINKED')}</td>
-      <td className="max-w-[420px] whitespace-pre-wrap break-words px-4 py-3 text-text">{sms.raw_sms || sms.message || sms.body || '—'}</td>
+      <td className="px-3 py-2.5 pl-8 font-semibold text-success">↳ SMS</td>
+      <td className="truncate px-3 py-2.5 font-mono text-gold">{txId || '—'}</td>
+      <td className="truncate px-3 py-2.5 font-mono font-bold text-success">{sms.id || '—'}</td>
+      <td className="truncate px-3 py-2.5 text-muted">{formatAbsoluteDate(sms.received_at || sms.created_at)}</td>
+      <td className="truncate px-3 py-2.5">{sms.sender_name || sms.sender_number || sms.provider || '—'}</td>
+      <td className="px-3 py-2.5 font-bold text-success">{formatMoney(sms.amount)}</td>
+      <td className="truncate px-3 py-2.5 text-success">{sms.match_status || (sms.matched ? 'MATCHED' : 'LINKED')}</td>
+      <td className="whitespace-pre-wrap break-words px-3 py-2.5 text-text">{sms.raw_sms || sms.message || sms.body || '—'}</td>
     </tr>)}
   </>
 }
