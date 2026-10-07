@@ -1,34 +1,165 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&display=swap');
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap');
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
 
-@theme {
-  --font-sans: "Noto Sans Arabic", system-ui, sans-serif;
+@custom-variant dark (&:is(.dark *, [data-theme='dark'] *));
 
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-card: #ffffff;
-  --color-border: #e2e8f0;
-  --color-gold: #6366f1;
-  --color-text: #0f172a;
-  --color-muted: #64748b;
-  --color-success: #10b981;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
+/*
+ * PayOS design system - Arabic-first RTL fintech OS.
+ * All semantic color tokens use OKLCH and are mirrored into the legacy
+ * bg/text/gold aliases used by the current panel components.
+ */
+@theme inline {
+  --font-sans:
+    "Cairo", "Tajawal", ui-sans-serif, system-ui, "Noto Color Emoji", "Apple Color Emoji",
+    "Segoe UI Emoji", sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-surface: var(--surface);
+  --color-glass-border: var(--glass-border);
+
+  --color-bg: var(--background);
+  --color-text: var(--foreground);
+  --color-gold: var(--brand);
+  --color-danger: var(--destructive);
 
   --animate-flash-gold: flash-gold 2s ease-out 1;
 }
 
+:root,
+html[data-theme='light'] {
+  --radius: 1rem;
+  --background: oklch(0.985 0.004 285);
+  --foreground: oklch(0.19 0.02 285);
+  --surface: oklch(0.96 0.006 285);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.19 0.02 285);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.19 0.02 285);
+  --primary: oklch(0.58 0.216 285.5);
+  --primary-foreground: oklch(0.99 0.005 285);
+  --brand: oklch(0.58 0.216 285.5);
+  --brand-foreground: oklch(0.99 0.005 285);
+  --secondary: oklch(0.94 0.01 285);
+  --secondary-foreground: oklch(0.25 0.03 285);
+  --muted: oklch(0.5 0.02 285);
+  --muted-foreground: oklch(0.5 0.02 285);
+  --accent: oklch(0.77 0.157 70);
+  --accent-foreground: oklch(0.2 0.03 70);
+  --success: oklch(0.7 0.148 162);
+  --success-foreground: oklch(0.15 0.02 162);
+  --warning: oklch(0.77 0.157 70);
+  --warning-foreground: oklch(0.2 0.03 70);
+  --destructive: oklch(0.63 0.237 27);
+  --destructive-foreground: oklch(0.99 0.01 27);
+  --border: oklch(0.9 0.01 285);
+  --input: oklch(0.9 0.01 285);
+  --ring: oklch(0.58 0.216 285.5);
+  --glass-border: oklch(0.19 0.02 285 / 10%);
+  --chart-1: oklch(0.58 0.216 285.5);
+  --chart-2: oklch(0.77 0.157 70);
+  --chart-3: oklch(0.7 0.148 162);
+  --chart-4: oklch(0.63 0.237 27);
+  --chart-5: oklch(0.62 0.12 230);
+  --sidebar: oklch(0.97 0.006 285);
+  --sidebar-foreground: oklch(0.19 0.02 285);
+  --sidebar-primary: oklch(0.58 0.216 285.5);
+  --sidebar-primary-foreground: oklch(0.99 0.005 285);
+  --sidebar-accent: oklch(0.94 0.01 285);
+  --sidebar-accent-foreground: oklch(0.25 0.03 285);
+  --sidebar-border: oklch(0.9 0.01 285);
+  --sidebar-ring: oklch(0.58 0.216 285.5);
+}
+
+.dark,
 html[data-theme='dark'] {
-  --color-bg: #0b1020;
-  --color-surface: #11182b;
-  --color-card: #151e33;
-  --color-border: #263452;
-  --color-gold: #8b9cff;
-  --color-text: #f3f6ff;
-  --color-muted: #9aa9c6;
-  --color-success: #2dd4a1;
-  --color-danger: #fb7185;
-  --color-warning: #fbbf24;
+  --background: oklch(0.165 0.014 285);
+  --foreground: oklch(0.97 0.006 285);
+  --surface: oklch(0.195 0.016 285);
+  --card: oklch(0.225 0.019 285);
+  --card-foreground: oklch(0.97 0.006 285);
+  --popover: oklch(0.225 0.019 285);
+  --popover-foreground: oklch(0.97 0.006 285);
+  --primary: oklch(0.63 0.204 285.5);
+  --primary-foreground: oklch(0.15 0.02 285);
+  --brand: oklch(0.63 0.204 285.5);
+  --brand-foreground: oklch(0.15 0.02 285);
+  --secondary: oklch(0.27 0.022 285);
+  --secondary-foreground: oklch(0.97 0.006 285);
+  --muted: oklch(0.7 0.02 285);
+  --muted-foreground: oklch(0.7 0.02 285);
+  --accent: oklch(0.79 0.15 70);
+  --accent-foreground: oklch(0.2 0.03 70);
+  --success: oklch(0.73 0.14 162);
+  --success-foreground: oklch(0.15 0.02 162);
+  --warning: oklch(0.79 0.15 70);
+  --warning-foreground: oklch(0.2 0.03 70);
+  --destructive: oklch(0.66 0.22 27);
+  --destructive-foreground: oklch(0.99 0.01 27);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.63 0.204 285.5);
+  --glass-border: oklch(1 0 0 / 18%);
+  --chart-1: oklch(0.63 0.204 285.5);
+  --chart-2: oklch(0.79 0.15 70);
+  --chart-3: oklch(0.73 0.14 162);
+  --chart-4: oklch(0.66 0.22 27);
+  --chart-5: oklch(0.68 0.12 230);
+  --sidebar: oklch(0.195 0.016 285);
+  --sidebar-foreground: oklch(0.97 0.006 285);
+  --sidebar-primary: oklch(0.63 0.204 285.5);
+  --sidebar-primary-foreground: oklch(0.15 0.02 285);
+  --sidebar-accent: oklch(0.27 0.022 285);
+  --sidebar-accent-foreground: oklch(0.97 0.006 285);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.63 0.204 285.5);
 }
 
 @keyframes flash-gold {
@@ -52,14 +183,42 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
-  background: var(--color-bg);
+  background:
+    radial-gradient(60rem 60rem at 15% -10%, oklch(0.63 0.204 285.5 / 18%), transparent 65%),
+    radial-gradient(45rem 45rem at 95% 0%, oklch(0.79 0.15 70 / 12%), transparent 60%),
+    var(--color-bg);
+  background-attachment: fixed;
   color: var(--color-text);
   color-scheme: light;
+  -webkit-font-smoothing: antialiased;
   transition: background-color 300ms ease, color 300ms ease;
 }
 
 * {
   box-sizing: border-box;
+  border-color: var(--color-border);
+}
+
+@utility glass {
+  background-color: color-mix(in oklab, var(--card) 65%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 12px 40px -16px oklch(0.1 0.02 285 / 35%);
+}
+
+@utility glass-strong {
+  background-color: color-mix(in oklab, var(--card) 88%, transparent);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 16px 50px -18px oklch(0.1 0.02 285 / 45%);
+}
+
+@utility tile-gradient {
+  background-image: linear-gradient(
+    145deg,
+    color-mix(in oklab, var(--primary) 22%, transparent),
+    color-mix(in oklab, var(--accent) 12%, transparent)
+  );
 }
 
 ::-webkit-scrollbar {
